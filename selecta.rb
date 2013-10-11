@@ -96,8 +96,7 @@ class Renderer < Struct.new(:world, :screen, :start_line)
 
   def render
     line_count = screen.height - start_line
-    matching = world.matching_options
-    matching = matching[0, line_count - 1]
+    matching = world.matching_options[0, line_count - 1]
     matching += [""] * (line_count - matching.length)
     search_line = "> " + world.search_string
     lines = [search_line,
