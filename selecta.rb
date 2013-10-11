@@ -9,54 +9,54 @@ KEY_CTRL_P = 16.chr
 KEY_CTRL_N = 14.chr
 
 class World
-  attr_reader :lines, :index, :search_string
+  attr_reader :choices, :index, :search_string
 
-  def initialize(lines, index, search_string)
-    @lines = lines
+  def initialize(choices, index, search_string)
+    @choices = choices
     @index = index
     @search_string = search_string
   end
 
-  def self.blank(options)
-    new(options, 0, "")
+  def self.blank(choices)
+    new(choices, 0, "")
   end
 
   def done?
     false
   end
 
-  def selected_option
-    @lines.fetch(@index)
+  def selected_choice
+    @choices.fetch(@index)
   end
 
   def down
-    World.new(lines, [@index + 1, lines.count - 1].min, @search_string)
+    World.new(choices, [@index + 1, choices.count - 1].min, @search_string)
   end
 
   def up
-    World.new(lines, [@index - 1, 0].max, @search_string)
+    World.new(choices, [@index - 1, 0].max, @search_string)
   end
 
   def append_search_string(string)
     if string =~ /[[:print:]]/
-      World.new(@lines, @index, @search_string + string)
+      World.new(@choices, @index, @search_string + string)
     else
       self
     end
   end
 
   def backspace
-    World.new(@lines, @index, @search_string[0...-1])
+    World.new(@choices, @index, @search_string[0...-1])
   end
 
   def delete_backward_word
-    World.new(@lines, @index, @search_string.sub(/[^ ]* *$/, ""))
+    World.new(@choices, @index, @search_string.sub(/[^ ]* *$/, ""))
   end
 
   def matches
     re = search_string.split(//).map(&Regexp.method(:escape)).join('.*')
     re = /#{re}/
-    @lines.select { |s| s =~ re }
+    @choices.select { |s| s =~ re }
   end
 
   def done
@@ -93,7 +93,7 @@ class Renderer < Struct.new(:world, :screen, :start_line)
   def self.render!(world, screen, start_line)
     rendered = Renderer.new(world, screen, start_line).render
     screen.with_cursor_hidden do
-      screen.write_lines(start_line, rendered.lines)
+      screen.write_lines(start_line, rendered.choices)
       screen.move_cursor(*rendered.cursor_position)
     end
   end
@@ -108,8 +108,8 @@ class Renderer < Struct.new(:world, :screen, :start_line)
         match
       end
     end
-    lines = [search_line] + matches
-    Rendered.new(lines, [start_line, search_line.length])
+    choices = [search_line] + matches
+    Rendered.new(choices, [start_line, search_line.length])
   end
 
   def correct_match_count(matches)
@@ -122,15 +122,15 @@ class Renderer < Struct.new(:world, :screen, :start_line)
     screen.height - start_line
   end
 
-  class Rendered < Struct.new(:lines, :cursor_position)
+  class Rendered < Struct.new(:choices, :cursor_position)
   end
 end
 
 def main
   10.times { puts }
   source_file = ARGV.fetch(0)
-  options = IO.readlines(source_file).map(&:chomp)
-  world = World.blank(options)
+  choices = IO.readlines(source_file).map(&:chomp)
+  world = World.blank(choices)
   Screen.with_screen do |screen|
     start_line = screen.height - 10
     while not world.done?
