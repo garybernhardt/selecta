@@ -386,7 +386,7 @@ class TTY < Struct.new(:in_file, :out_file)
   end
 end
 
-OPTIONS = Options.new(10)
+OPTIONS = Options.new(20)
 begin
   main
 rescue SystemExit, Interrupt
