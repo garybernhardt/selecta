@@ -51,16 +51,11 @@ class World
   attr_reader :choices, :index, :search_string
 
   def initialize(vars)
-    keys = vars.keys.sort
-    unless keys == [:choices, :index, :search_string, :done].sort
-      raise "World got the wrong set of keys: #{keys}"
-    end
-
     @vars = vars
-    @choices = vars[:choices]
-    @index = vars[:index]
-    @search_string = vars[:search_string]
-    @done = vars[:done]
+    @choices = vars.fetch(:choices)
+    @index = vars.fetch(:index)
+    @search_string = vars.fetch(:search_string)
+    @done = vars.fetch(:done)
   end
 
   def self.blank(choices)
