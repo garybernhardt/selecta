@@ -5,6 +5,8 @@ require "io/console"
 KEY_CTRL_C = 3.chr
 KEY_DELETE = 127.chr
 KEY_CTRL_W = 23.chr
+KEY_CTRL_P = 16.chr
+KEY_CTRL_N = 14.chr
 
 class World
   attr_reader :lines, :search_string
@@ -28,9 +30,11 @@ class World
   end
 
   def down
+    World.new(lines, [@index + 1, lines.count - 1].min, @search_string)
   end
 
   def up
+    World.new(lines, [@index - 1, 0].max, @search_string)
   end
 
   def append_search_string(string)
@@ -75,8 +79,8 @@ end
 def handle_key(world)
   key = $stdin.getc
   case key
-  #when ?j then @cursor = @cursor.down
-  #when ?k then @cursor = @cursor.up
+  when KEY_CTRL_N then world.down
+  when KEY_CTRL_P then world.up
   when KEY_DELETE then world.backspace
   when ?\r then world.done
   when KEY_CTRL_C then raise SystemExit
