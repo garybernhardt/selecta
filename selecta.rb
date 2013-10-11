@@ -81,6 +81,26 @@ class TTY < Struct.new(:in_file, :out_file)
   def get_char
     in_file.getc
   end
+
+  def puts
+    out_file.puts
+  end
+
+  def stty(args)
+    command("stty -f #{out_file.path} #{args}")
+  end
+
+  def winsize
+    out_file.winsize
+  end
+
+  private
+
+  def command(command)
+    result = `#{command}`
+    raise "Command failed: #{command.inspect}" unless $?.success?
+    result
+  end
 end
 
 class Selection
@@ -146,7 +166,7 @@ def main
   choices = $stdin.readlines.map(&:chomp)
   world = World.blank(choices)
   TTY.with_tty do |tty|
-    Screen.with_screen(tty.out_file) do |screen|
+    Screen.with_tty(tty) do |screen|
       while not world.done?
         Renderer.render!(world, screen)
         world = handle_key(world, tty.get_char)
@@ -158,23 +178,23 @@ def main
 end
 
 class Screen
-  def self.with_screen(file)
-    screen = self.new(file)
+  def self.with_tty(tty)
+    screen = self.new(tty)
     screen.configure_tty
     begin
       yield screen
     ensure
       screen.restore_tty
-      file.puts
+      tty.puts
     end
   end
 
-  attr_reader :file, :ansi
+  attr_reader :tty, :ansi
 
-  def initialize(file)
-    @file = file
-    @ansi = ANSI.new(file)
-    @original_stty_state = stty("-g")
+  def initialize(tty)
+    @tty = tty
+    @ansi = ANSI.new(tty.out_file)
+    @original_stty_state = tty.stty("-g")
   end
 
 
@@ -183,23 +203,13 @@ class Screen
     # -echo: Don't echo keys back
     # cbreak: Set up lots of standard stuff, including INTR signal on ^C
     # dsusp undef: Unmap delayed suspend (^Y by default)
-    stty("raw -echo cbreak dsusp undef")
+    tty.stty("raw -echo cbreak dsusp undef")
     ansi.reset!
   end
 
   def restore_tty
-    stty("#{@original_stty_state}")
-    file.puts
-  end
-
-  def stty(args)
-    command("stty -f #{file.path} #{args}")
-  end
-
-  def command(command)
-    result = `#{command}`
-    raise "Command failed: #{command.inspect}" unless $?.success?
-    result
+    tty.stty("#{@original_stty_state}")
+    tty.puts
   end
 
   def suspend
@@ -230,7 +240,7 @@ class Screen
   end
 
   def size
-    height, width = file.winsize
+    height, width = tty.winsize
     [height, width]
   end
 
