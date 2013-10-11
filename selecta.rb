@@ -8,6 +8,42 @@ KEY_CTRL_P = 16.chr
 KEY_CTRL_W = 23.chr
 KEY_DELETE = 127.chr
 
+def main
+  choices = $stdin.readlines.map(&:chomp)
+  world = World.blank(choices)
+  TTY.with_tty do |tty|
+    # We emit the number of lines we'll use later so we don't clobber whatever
+    # was already on the screen.
+    (OPTIONS.visible_choices).times { tty.puts }
+    Screen.with_tty(tty) do |screen|
+      while not world.done?
+        Renderer.render!(world, screen)
+        world = handle_key(world, tty.get_char)
+      end
+      screen.move_cursor(screen.height - 1, 0)
+    end
+  end
+  puts world.selection
+end
+
+def handle_key(world, key)
+  case key
+
+  when KEY_CTRL_N then world.down
+  when KEY_CTRL_P then world.up
+
+  when KEY_CTRL_W then world.delete_backward_word
+  when KEY_DELETE then world.backspace
+
+  when ?\r then world.done
+  when KEY_CTRL_C then raise SystemExit
+
+  when /[[:print:]]/ then world.append_search_string(key.chr)
+
+  else world
+  end
+end
+
 class Options < Struct.new(:visible_choices)
 end
 
@@ -64,41 +100,6 @@ class World
   end
 end
 
-class TTY < Struct.new(:in_file, :out_file)
-  def self.with_tty(&block)
-    File.open("/dev/tty", "r") do |in_file|
-      File.open("/dev/tty", "w") do |out_file|
-        tty = TTY.new(in_file, out_file)
-        block.call(tty)
-      end
-    end
-  end
-
-  def get_char
-    in_file.getc
-  end
-
-  def puts
-    out_file.puts
-  end
-
-  def stty(args)
-    command("stty -f #{out_file.path} #{args}")
-  end
-
-  def winsize
-    out_file.winsize
-  end
-
-  private
-
-  def command(command)
-    result = `#{command}`
-    raise "Command failed: #{command.inspect}" unless $?.success?
-    result
-  end
-end
-
 class Selection
   attr_reader :selection
 
@@ -108,24 +109,6 @@ class Selection
 
   def done?
     true
-  end
-end
-
-def handle_key(world, key)
-  case key
-
-  when KEY_CTRL_N then world.down
-  when KEY_CTRL_P then world.up
-
-  when KEY_CTRL_W then world.delete_backward_word
-  when KEY_DELETE then world.backspace
-
-  when ?\r then world.done
-  when KEY_CTRL_C then raise SystemExit
-
-  when /[[:print:]]/ then world.append_search_string(key.chr)
-
-  else world
   end
 end
 
@@ -161,24 +144,6 @@ class Renderer < Struct.new(:world, :screen)
 
   class Rendered < Struct.new(:choices, :search_line)
   end
-end
-
-def main
-  choices = $stdin.readlines.map(&:chomp)
-  world = World.blank(choices)
-  TTY.with_tty do |tty|
-    # We emit the number of lines we'll use later so we don't clobber whatever
-    # was already on the screen.
-    (OPTIONS.visible_choices).times { tty.puts }
-    Screen.with_tty(tty) do |screen|
-      while not world.done?
-        Renderer.render!(world, screen)
-        world = handle_key(world, tty.get_char)
-      end
-      screen.move_cursor(screen.height - 1, 0)
-    end
-  end
-  puts world.selection
 end
 
 class Screen
@@ -293,6 +258,26 @@ class Screen
   end
 end
 
+class Text
+  attr_reader :components
+
+  def self.[](*args)
+    new(args)
+  end
+
+  def initialize(components)
+    @components = components
+  end
+
+  def ==(other)
+    components == other.components
+  end
+
+  def +(other)
+    Text[*(components + other.components)]
+  end
+end
+
 class ANSI
   ESC = 27.chr
 
@@ -367,23 +352,38 @@ class ANSI
   end
 end
 
-class Text
-  attr_reader :components
-
-  def self.[](*args)
-    new(args)
+class TTY < Struct.new(:in_file, :out_file)
+  def self.with_tty(&block)
+    File.open("/dev/tty", "r") do |in_file|
+      File.open("/dev/tty", "w") do |out_file|
+        tty = TTY.new(in_file, out_file)
+        block.call(tty)
+      end
+    end
   end
 
-  def initialize(components)
-    @components = components
+  def get_char
+    in_file.getc
   end
 
-  def ==(other)
-    components == other.components
+  def puts
+    out_file.puts
   end
 
-  def +(other)
-    Text[*(components + other.components)]
+  def stty(args)
+    command("stty -f #{out_file.path} #{args}")
+  end
+
+  def winsize
+    out_file.winsize
+  end
+
+  private
+
+  def command(command)
+    result = `#{command}`
+    raise "Command failed: #{command.inspect}" unless $?.success?
+    result
   end
 end
 
