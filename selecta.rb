@@ -8,6 +8,9 @@ KEY_CTRL_W = 23.chr
 KEY_CTRL_P = 16.chr
 KEY_CTRL_N = 14.chr
 
+class Options < Struct.new(:visible_choices)
+end
+
 class World
   attr_reader :choices, :index, :search_string
 
@@ -30,7 +33,8 @@ class World
   end
 
   def down
-    World.new(choices, [@index + 1, choices.count - 1].min, @search_string)
+    index = [@index + 1, matches.count - 1, OPTIONS.visible_choices - 1].min
+    World.new(choices, index, @search_string)
   end
 
   def up
@@ -89,12 +93,13 @@ def handle_key(world)
   end
 end
 
-class Renderer < Struct.new(:world, :screen, :start_line)
-  def self.render!(world, screen, start_line)
-    rendered = Renderer.new(world, screen, start_line).render
+class Renderer < Struct.new(:world, :screen)
+  def self.render!(world, screen)
+    rendered = Renderer.new(world, screen).render
+    start_line = screen.height - OPTIONS.visible_choices - 1
     screen.with_cursor_hidden do
       screen.write_lines(start_line, rendered.choices)
-      screen.move_cursor(*rendered.cursor_position)
+      screen.move_cursor(start_line, rendered.search_line.length)
     end
   end
 
@@ -109,32 +114,27 @@ class Renderer < Struct.new(:world, :screen, :start_line)
       end
     end
     choices = [search_line] + matches
-    Rendered.new(choices, [start_line, search_line.length])
+    Rendered.new(choices, search_line)
   end
 
   def correct_match_count(matches)
-    limited = matches[0, line_count - 1]
-    padded = limited + [""] * (line_count - limited.length)
+    limited = matches[0, OPTIONS.visible_choices]
+    padded = limited + [""] * (OPTIONS.visible_choices - limited.length)
     padded
   end
 
-  def line_count
-    screen.height - start_line
-  end
-
-  class Rendered < Struct.new(:choices, :cursor_position)
+  class Rendered < Struct.new(:choices, :search_line)
   end
 end
 
 def main
-  10.times { puts }
+  OPTIONS.visible_choices.times { puts }
   source_file = ARGV.fetch(0)
   choices = IO.readlines(source_file).map(&:chomp)
   world = World.blank(choices)
   Screen.with_screen do |screen|
-    start_line = screen.height - 10
     while not world.done?
-      Renderer.render!(world, screen, start_line)
+      Renderer.render!(world, screen)
       world = handle_key(world)
     end
     screen.move_cursor(screen.height - 1, 0)
@@ -348,4 +348,5 @@ class Text
   end
 end
 
+OPTIONS = Options.new(10)
 main
