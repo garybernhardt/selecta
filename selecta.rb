@@ -146,7 +146,7 @@ def main
   source_file = ARGV.fetch(0)
   choices = IO.readlines(source_file).map(&:chomp)
   world = World.blank(choices)
-  Screen.with_screen do |screen|
+  Screen.with_screen($stdout) do |screen|
     TTY.with_tty do |tty|
       while not world.done?
         Renderer.render!(world, screen)
@@ -159,21 +159,22 @@ def main
 end
 
 class Screen
-  def self.with_screen
-    screen = self.new
+  def self.with_screen(file)
+    screen = self.new(file)
     screen.configure_tty
     begin
       yield screen
     ensure
       screen.restore_tty
-      puts
+      file.puts
     end
   end
 
-  attr_reader :ansi
+  attr_reader :file, :ansi
 
-  def initialize
-    @ansi = ANSI.new($stdout)
+  def initialize(file)
+    @file = file
+    @ansi = ANSI.new(file)
     @original_stty_state = command("stty -g")
   end
 
@@ -183,13 +184,14 @@ class Screen
     # -echo: Don't echo keys back
     # cbreak: Set up lots of standard stuff, including INTR signal on ^C
     # dsusp undef: Unmap delayed suspend (^Y by default)
+    #XXX: needs to use file
     command("stty raw -echo cbreak dsusp undef")
     ansi.reset!
   end
 
   def restore_tty
     command("stty #{@original_stty_state}")
-    puts
+    file.puts
   end
 
   def suspend
@@ -220,7 +222,7 @@ class Screen
   end
 
   def size
-    height, width = $stdout.winsize
+    height, width = file.winsize
     [height, width]
   end
 
