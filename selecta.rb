@@ -174,7 +174,7 @@ class Screen
   def initialize(file)
     @file = file
     @ansi = ANSI.new(file)
-    @original_stty_state = command("stty -g -f #{file.path}")
+    @original_stty_state = stty("-g")
   end
 
 
@@ -183,13 +183,23 @@ class Screen
     # -echo: Don't echo keys back
     # cbreak: Set up lots of standard stuff, including INTR signal on ^C
     # dsusp undef: Unmap delayed suspend (^Y by default)
-    command("stty -f #{file.path} raw -echo cbreak dsusp undef")
+    stty("raw -echo cbreak dsusp undef")
     ansi.reset!
   end
 
   def restore_tty
-    command("stty -f #{file.path} #{@original_stty_state}")
+    stty("#{@original_stty_state}")
     file.puts
+  end
+
+  def stty(args)
+    command("stty -f #{file.path} #{args}")
+  end
+
+  def command(command)
+    result = `#{command}`
+    raise "Command failed: #{command.inspect}" unless $?.success?
+    result
   end
 
   def suspend
@@ -268,12 +278,6 @@ class Screen
 
   def set_color(color, highlight)
     ansi.color!(color, highlight ? :black : :default)
-  end
-
-  def command(command)
-    result = `#{command}`
-    raise "Command failed: #{command.inspect}" unless $?.success?
-    result
   end
 end
 
