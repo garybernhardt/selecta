@@ -64,7 +64,7 @@ class World
   end
 
   def done
-    Selection.new(matches.first)
+    Selection.new(matches.fetch(index))
   end
 end
 
