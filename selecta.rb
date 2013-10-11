@@ -68,6 +68,41 @@ class World
   end
 end
 
+class TTY < Struct.new(:in_file, :out_file)
+  def self.with_tty(&block)
+    File.open("/dev/tty", "r") do |in_file|
+      File.open("/dev/tty", "w") do |out_file|
+        tty = TTY.new(in_file, out_file)
+        block.call(tty)
+      end
+    end
+  end
+
+  def get_char
+    in_file.getc
+  end
+
+  def puts
+    out_file.puts
+  end
+
+  def stty(args)
+    command("stty -f #{out_file.path} #{args}")
+  end
+
+  def winsize
+    out_file.winsize
+  end
+
+  private
+
+  def command(command)
+    result = `#{command}`
+    raise "Command failed: #{command.inspect}" unless $?.success?
+    result
+  end
+end
+
 class Selection
   attr_reader :selection
 
@@ -80,8 +115,7 @@ class Selection
   end
 end
 
-def handle_key(world)
-  key = $stdin.getc
+def handle_key(world, key)
   case key
   when KEY_CTRL_N then world.down
   when KEY_CTRL_P then world.up
@@ -128,36 +162,41 @@ class Renderer < Struct.new(:world, :screen)
 end
 
 def main
-  OPTIONS.visible_choices.times { puts }
-  source_file = ARGV.fetch(0)
-  choices = IO.readlines(source_file).map(&:chomp)
+  choices = $stdin.readlines.map(&:chomp)
   world = World.blank(choices)
-  Screen.with_screen do |screen|
-    while not world.done?
-      Renderer.render!(world, screen)
-      world = handle_key(world)
+  TTY.with_tty do |tty|
+    # We emit the number of lines we'll use later so we don't clobber whatever
+    # was already on the screen.
+    (OPTIONS.visible_choices).times { tty.puts }
+    Screen.with_tty(tty) do |screen|
+      while not world.done?
+        Renderer.render!(world, screen)
+        world = handle_key(world, tty.get_char)
+      end
+      screen.move_cursor(screen.height - 1, 0)
     end
-    screen.move_cursor(screen.height - 1, 0)
   end
   puts world.selection
 end
 
 class Screen
-  def self.with_screen
-    screen = self.new
+  def self.with_tty(tty)
+    screen = self.new(tty)
     screen.configure_tty
     begin
       yield screen
     ensure
       screen.restore_tty
-      puts
+      tty.puts
     end
   end
 
-  def initialize
-    @original_stty_state = command("stty -g")
-    @status_line = height - 3
-    @highlight = false
+  attr_reader :tty, :ansi
+
+  def initialize(tty)
+    @tty = tty
+    @ansi = ANSI.new(tty.out_file)
+    @original_stty_state = tty.stty("-g")
   end
 
 
@@ -166,13 +205,11 @@ class Screen
     # -echo: Don't echo keys back
     # cbreak: Set up lots of standard stuff, including INTR signal on ^C
     # dsusp undef: Unmap delayed suspend (^Y by default)
-    command("stty raw -echo cbreak dsusp undef")
-    ANSI.reset!
+    tty.stty("raw -echo cbreak dsusp undef")
   end
 
   def restore_tty
-    command("stty #{@original_stty_state}")
-    puts
+    tty.stty("#{@original_stty_state}")
   end
 
   def suspend
@@ -186,11 +223,11 @@ class Screen
   end
 
   def with_cursor_hidden(&block)
-    ANSI.hide_cursor!
+    ansi.hide_cursor!
     begin
       block.call
     ensure
-      ANSI.show_cursor!
+      ansi.show_cursor!
     end
   end
 
@@ -203,12 +240,12 @@ class Screen
   end
 
   def size
-    height, width = $stdout.winsize
+    height, width = tty.winsize
     [height, width]
   end
 
   def move_cursor(line, column)
-    ANSI.setpos!(line, column)
+    ansi.setpos!(line, column)
   end
 
   def write_line(line, text)
@@ -235,8 +272,8 @@ class Screen
     highlight = false
     text.components.each do |component|
       if component.is_a? String
-        ANSI.setpos!(line, column)
-        ANSI.addstr!(component)
+        ansi.setpos!(line, column)
+        ansi.addstr!(component)
         column += component.length
       elsif component == :highlight
         highlight = true
@@ -246,48 +283,48 @@ class Screen
       end
     end
     remaining_cols = width - column
-    ANSI.addstr!(" " * remaining_cols)
+    ansi.addstr!(" " * remaining_cols)
   end
 
   def set_color(color, highlight)
-    ANSI.color!(color, highlight ? :black : :default)
-  end
-
-  def command(command)
-    result = `#{command}`
-    raise "Command failed: #{command.inspect}" unless $?.success?
-    result
+    ansi.color!(color, highlight ? :black : :default)
   end
 end
 
-module ANSI
+class ANSI
   ESC = 27.chr
 
-  def self.escape(sequence)
+  attr_reader :file
+
+  def initialize(file)
+    @file = file
+  end
+
+  def escape(sequence)
     ESC + "[" + sequence
   end
 
-  def self.reset
+  def reset
     escape "2J"
   end
 
-  def self.hide_cursor
+  def hide_cursor
     escape "?25l"
   end
 
-  def self.show_cursor
+  def show_cursor
     escape "?25h"
   end
 
-  def self.setpos(line, column)
+  def setpos(line, column)
     escape "#{line + 1};#{column + 1}H"
   end
 
-  def self.addstr(str)
+  def addstr(str)
     str
   end
 
-  def self.color(fg, bg=:default)
+  def color(fg, bg=:default)
     normal = "22"
     fg_codes = {
       :black => 30,
@@ -316,15 +353,15 @@ module ANSI
     escape "#{normal};#{fg_code};#{bg_code}m"
   end
 
-  def self.reset!(*args); write reset(*args); end
-  def self.setpos!(*args); write setpos(*args); end
-  def self.addstr!(*args); write addstr(*args); end
-  def self.color!(*args); write color(*args); end
-  def self.hide_cursor!(*args); write hide_cursor(*args); end
-  def self.show_cursor!(*args); write show_cursor(*args); end
+  def reset!(*args); write reset(*args); end
+  def setpos!(*args); write setpos(*args); end
+  def addstr!(*args); write addstr(*args); end
+  def color!(*args); write color(*args); end
+  def hide_cursor!(*args); write hide_cursor(*args); end
+  def show_cursor!(*args); write show_cursor(*args); end
 
-  def self.write(bytes)
-    $stdout.write(bytes)
+  def write(bytes)
+    file.write(bytes)
   end
 end
 
