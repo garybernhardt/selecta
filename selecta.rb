@@ -170,7 +170,10 @@ class Screen
     end
   end
 
+  attr_reader :ansi
+
   def initialize
+    @ansi = ANSI.new($stdout)
     @original_stty_state = command("stty -g")
   end
 
@@ -181,7 +184,7 @@ class Screen
     # cbreak: Set up lots of standard stuff, including INTR signal on ^C
     # dsusp undef: Unmap delayed suspend (^Y by default)
     command("stty raw -echo cbreak dsusp undef")
-    ANSI.reset!
+    ansi.reset!
   end
 
   def restore_tty
@@ -200,11 +203,11 @@ class Screen
   end
 
   def with_cursor_hidden(&block)
-    ANSI.hide_cursor!
+    ansi.hide_cursor!
     begin
       block.call
     ensure
-      ANSI.show_cursor!
+      ansi.show_cursor!
     end
   end
 
@@ -222,7 +225,7 @@ class Screen
   end
 
   def move_cursor(line, column)
-    ANSI.setpos!(line, column)
+    ansi.setpos!(line, column)
   end
 
   def write_line(line, text)
@@ -249,8 +252,8 @@ class Screen
     highlight = false
     text.components.each do |component|
       if component.is_a? String
-        ANSI.setpos!(line, column)
-        ANSI.addstr!(component)
+        ansi.setpos!(line, column)
+        ansi.addstr!(component)
         column += component.length
       elsif component == :highlight
         highlight = true
@@ -260,11 +263,11 @@ class Screen
       end
     end
     remaining_cols = width - column
-    ANSI.addstr!(" " * remaining_cols)
+    ansi.addstr!(" " * remaining_cols)
   end
 
   def set_color(color, highlight)
-    ANSI.color!(color, highlight ? :black : :default)
+    ansi.color!(color, highlight ? :black : :default)
   end
 
   def command(command)
@@ -274,34 +277,40 @@ class Screen
   end
 end
 
-module ANSI
+class ANSI
   ESC = 27.chr
 
-  def self.escape(sequence)
+  attr_reader :file
+
+  def initialize(file)
+    @file = file
+  end
+
+  def escape(sequence)
     ESC + "[" + sequence
   end
 
-  def self.reset
+  def reset
     escape "2J"
   end
 
-  def self.hide_cursor
+  def hide_cursor
     escape "?25l"
   end
 
-  def self.show_cursor
+  def show_cursor
     escape "?25h"
   end
 
-  def self.setpos(line, column)
+  def setpos(line, column)
     escape "#{line + 1};#{column + 1}H"
   end
 
-  def self.addstr(str)
+  def addstr(str)
     str
   end
 
-  def self.color(fg, bg=:default)
+  def color(fg, bg=:default)
     normal = "22"
     fg_codes = {
       :black => 30,
@@ -330,15 +339,15 @@ module ANSI
     escape "#{normal};#{fg_code};#{bg_code}m"
   end
 
-  def self.reset!(*args); write reset(*args); end
-  def self.setpos!(*args); write setpos(*args); end
-  def self.addstr!(*args); write addstr(*args); end
-  def self.color!(*args); write color(*args); end
-  def self.hide_cursor!(*args); write hide_cursor(*args); end
-  def self.show_cursor!(*args); write show_cursor(*args); end
+  def reset!(*args); write reset(*args); end
+  def setpos!(*args); write setpos(*args); end
+  def addstr!(*args); write addstr(*args); end
+  def color!(*args); write color(*args); end
+  def hide_cursor!(*args); write hide_cursor(*args); end
+  def show_cursor!(*args); write show_cursor(*args); end
 
-  def self.write(bytes)
-    $stdout.write(bytes)
+  def write(bytes)
+    file.write(bytes)
   end
 end
 
