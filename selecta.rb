@@ -94,7 +94,7 @@ class World
   def matches
     re = search_string.split(//).map(&Regexp.method(:escape)).join('.*')
     re = /#{re}/
-    @choices.select { |s| s =~ re }
+    @choices.select { |s| s =~ re }.sort_by(&:length)
   end
 
   def done
