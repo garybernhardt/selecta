@@ -13,17 +13,15 @@ KEY_DELETE = 127.chr
 def main
   choices = $stdin.readlines.map(&:chomp)
   world = World.blank(choices)
-  TTY.with_tty do |tty|
-    # We emit the number of lines we'll use later so we don't clobber whatever
-    # was already on the screen.
+  # We emit the number of lines we'll use later so we don't clobber whatever
+  # was already on the screen.
+  Screen.with_screen do |screen, tty|
     (OPTIONS.visible_choices).times { tty.puts }
-    Screen.with_tty(tty) do |screen|
-      while not world.done?
-        Renderer.render!(world, screen)
-        world = handle_key(world, tty.get_char)
-      end
-      screen.move_cursor(screen.height - 1, 0)
+    while not world.done?
+      Renderer.render!(world, screen)
+      world = handle_key(world, tty.get_char)
     end
+    screen.move_cursor(screen.height - 1, 0)
   end
   puts world.selection
 end
@@ -146,14 +144,16 @@ class Renderer < Struct.new(:world, :screen)
 end
 
 class Screen
-  def self.with_tty(tty)
-    screen = self.new(tty)
-    screen.configure_tty
-    begin
-      yield screen
-    ensure
-      screen.restore_tty
-      tty.puts
+  def self.with_screen
+    TTY.with_tty do |tty|
+      screen = self.new(tty)
+      screen.configure_tty
+      begin
+        yield screen, tty
+      ensure
+        screen.restore_tty
+        tty.puts
+      end
     end
   end
 
