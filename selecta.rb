@@ -143,8 +143,7 @@ end
 
 def main
   OPTIONS.visible_choices.times { puts }
-  source_file = ARGV.fetch(0)
-  choices = IO.readlines(source_file).map(&:chomp)
+  choices = $stdin.readlines.map(&:chomp)
   world = World.blank(choices)
   TTY.with_tty do |tty|
     Screen.with_screen(tty.out_file) do |screen|
@@ -175,7 +174,7 @@ class Screen
   def initialize(file)
     @file = file
     @ansi = ANSI.new(file)
-    @original_stty_state = command("stty -g")
+    @original_stty_state = command("stty -g -f #{file.path}")
   end
 
 
@@ -184,13 +183,12 @@ class Screen
     # -echo: Don't echo keys back
     # cbreak: Set up lots of standard stuff, including INTR signal on ^C
     # dsusp undef: Unmap delayed suspend (^Y by default)
-    #XXX: needs to use file
-    command("stty raw -echo cbreak dsusp undef")
+    command("stty -f #{file.path} raw -echo cbreak dsusp undef")
     ansi.reset!
   end
 
   def restore_tty
-    command("stty #{@original_stty_state}")
+    command("stty -f #{file.path} #{@original_stty_state}")
     file.puts
   end
 
