@@ -95,8 +95,7 @@ class Selection
   end
 end
 
-def handle_key(world)
-  key = $stdin.getc
+def handle_key(world, key)
   case key
   when KEY_CTRL_N then world.down
   when KEY_CTRL_P then world.up
@@ -148,11 +147,13 @@ def main
   choices = IO.readlines(source_file).map(&:chomp)
   world = World.blank(choices)
   Screen.with_screen do |screen|
-    while not world.done?
-      Renderer.render!(world, screen)
-      world = handle_key(world)
+    TTY.with_tty do |tty|
+      while not world.done?
+        Renderer.render!(world, screen)
+        world = handle_key(world, tty.get_char)
+      end
+      screen.move_cursor(screen.height - 1, 0)
     end
-    screen.move_cursor(screen.height - 1, 0)
   end
   puts world.selection
 end
