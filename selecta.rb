@@ -96,11 +96,11 @@ class Renderer < Struct.new(:world, :screen, :start_line)
 
   def render
     line_count = screen.height - start_line
-    matching = world.matches[0, line_count - 1]
-    matching += [""] * (line_count - matching.length)
+    matches = world.matches[0, line_count - 1]
+    matches += [""] * (line_count - matches.length)
     search_line = "> " + world.search_string
     lines = [search_line,
-             Text[:red, matching[0]]] + matching[1..-1]
+             Text[:red, matches[0]]] + matches[1..-1]
     Rendered.new(lines, [start_line, search_line.length])
   end
 
