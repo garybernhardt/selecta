@@ -147,7 +147,7 @@ def main
   choices = IO.readlines(source_file).map(&:chomp)
   world = World.blank(choices)
   TTY.with_tty do |tty|
-    Screen.with_screen($stdout) do |screen|
+    Screen.with_screen(tty.out_file) do |screen|
       while not world.done?
         Renderer.render!(world, screen)
         world = handle_key(world, tty.get_char)
