@@ -19,7 +19,10 @@ cat $(ls *.txt | selecta)
 ```
 
 which will prompt the user to fuzzy-select one of the text files in the current
-directory, then print the contents of whichever one they choose.
+directory, then print the contents of whichever one they choose. It looks like
+this:
+
+![Demo](https://raw.github.com/garybernhardt/selecta/master/demo.gif)
 
 Selecta does not:
 
@@ -29,6 +32,8 @@ Selecta does not:
 - Perform any actions on the item you select.
 
 ## Installation
+
+Selecta requires Ruby 1.9 or better.
 
 For now, copy the `selecta` script to your path. ~/bin is a great place for it.
 If you don't currently have a ~/bin, just do `mkdir ~/bin` and add
