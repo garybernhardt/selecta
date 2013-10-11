@@ -12,7 +12,7 @@ Its interface is dead simple:
   block until they make a selection or kill it).
 * It will print the user's selection on stdout.
 
-So, for example, you can say:
+For example, you can say:
 
 ```
 cat $(ls *.txt | selecta)
