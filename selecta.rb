@@ -172,8 +172,6 @@ class Screen
 
   def initialize
     @original_stty_state = command("stty -g")
-    @status_line = height - 3
-    @highlight = false
   end
 
 
