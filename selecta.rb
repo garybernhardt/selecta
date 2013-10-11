@@ -42,11 +42,7 @@ class World
   end
 
   def append_search_string(string)
-    if string =~ /[[:print:]]/
-      World.new(@choices, 0, @search_string + string)
-    else
-      self
-    end
+    World.new(@choices, -1, @search_string + string)
   end
 
   def backspace
@@ -117,13 +113,19 @@ end
 
 def handle_key(world, key)
   case key
+
   when KEY_CTRL_N then world.down
   when KEY_CTRL_P then world.up
+
+  when KEY_CTRL_W then world.delete_backward_word
   when KEY_DELETE then world.backspace
+
   when ?\r then world.done
   when KEY_CTRL_C then raise SystemExit
-  when KEY_CTRL_W then world.delete_backward_word
-  else world.append_search_string(key.chr)
+
+  when /[[:print:]]/ then world.append_search_string(key.chr)
+
+  else world
   end
 end
 
