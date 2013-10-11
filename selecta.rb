@@ -68,6 +68,21 @@ class World
   end
 end
 
+class TTY < Struct.new(:in_file, :out_file)
+  def self.with_tty(&block)
+    File.open("/dev/tty", "r") do |in_file|
+      File.open("/dev/tty", "w") do |out_file|
+        tty = TTY.new(in_file, out_file)
+        block.call(tty)
+      end
+    end
+  end
+
+  def get_char
+    in_file.getc
+  end
+end
+
 class Selection
   attr_reader :selection
 
