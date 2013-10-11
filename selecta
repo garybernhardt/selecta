@@ -11,7 +11,7 @@ KEY_CTRL_W = 23.chr
 KEY_DELETE = 127.chr
 
 def main
-  choices = $stdin.readlines.map(&:chomp)
+  choices = $stdin.readlines.map(&:chomp).sort_by(&:length)
   world = World.blank(choices)
   # We emit the number of lines we'll use later so we don't clobber whatever
   # was already on the screen.
@@ -92,7 +92,7 @@ class World
   def matches
     re = search_string.split(//).map(&Regexp.method(:escape)).join('.*')
     re = /#{re}/i
-    @choices.select { |s| s =~ re }.sort_by(&:length)
+    @choices.select { |s| s =~ re }
   end
 
   def done
