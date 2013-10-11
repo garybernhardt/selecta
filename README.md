@@ -31,6 +31,13 @@ Selecta does not:
 - Know what it's searching.
 - Perform any actions on the item you select.
 
+It supports these keys:
+
+- ^W to delete the word before the cursor
+- ^N to select the next match
+- ^P to select the previous match
+- ^C to quit without selecting a match
+
 ## Installation
 
 Selecta requires Ruby 1.9 or better.
