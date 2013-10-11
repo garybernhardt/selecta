@@ -248,15 +248,11 @@ class Screen
         highlight = true
       else
         color = component
-        set_color(component, highlight)
+        ansi.color!(color, highlight ? :black : :default)
       end
     end
     remaining_cols = width - column
     ansi.addstr!(" " * remaining_cols)
-  end
-
-  def set_color(color, highlight)
-    ansi.color!(color, highlight ? :black : :default)
   end
 end
 
