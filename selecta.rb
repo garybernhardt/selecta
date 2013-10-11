@@ -9,7 +9,7 @@ KEY_CTRL_P = 16.chr
 KEY_CTRL_N = 14.chr
 
 class World
-  attr_reader :lines, :search_string
+  attr_reader :lines, :index, :search_string
 
   def initialize(lines, index, search_string)
     @lines = lines
@@ -100,14 +100,20 @@ class Renderer < Struct.new(:world, :screen, :start_line)
 
   def render
     search_line = "> " + world.search_string
-    first_match = Text[:red, matches[0]]
-    rest_of_matches = matches[1..-1]
-    lines = [search_line, first_match] + rest_of_matches
+    matches = correct_match_count(world.matches)
+    matches = matches.each_with_index.map do |match, index|
+      if index == world.index
+        Text[:red, match]
+      else
+        match
+      end
+    end
+    lines = [search_line] + matches
     Rendered.new(lines, [start_line, search_line.length])
   end
 
-  def matches
-    limited = world.matches[0, line_count - 1]
+  def correct_match_count(matches)
+    limited = matches[0, line_count - 1]
     padded = limited + [""] * (line_count - limited.length)
     padded
   end
