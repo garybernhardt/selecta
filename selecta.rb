@@ -49,14 +49,14 @@ class World
     World.new(@lines, @index, @search_string.sub(/[^ ]* *$/, ""))
   end
 
-  def matching_options
+  def matches
     re = search_string.split(//).map(&Regexp.method(:escape)).join('.*')
     re = /#{re}/
     @lines.select { |s| s =~ re }
   end
 
   def done
-    Selection.new(matching_options.first)
+    Selection.new(matches.first)
   end
 end
 
@@ -96,7 +96,7 @@ class Renderer < Struct.new(:world, :screen, :start_line)
 
   def render
     line_count = screen.height - start_line
-    matching = world.matching_options[0, line_count - 1]
+    matching = world.matches[0, line_count - 1]
     matching += [""] * (line_count - matching.length)
     search_line = "> " + world.search_string
     lines = [search_line,
