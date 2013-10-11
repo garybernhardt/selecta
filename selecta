@@ -23,7 +23,7 @@ def main
     end
     screen.move_cursor(screen.height - 1, 0)
   end
-  puts world.selection
+  puts world.selected_choice
 end
 
 def handle_key(world, key)
@@ -52,7 +52,7 @@ class World
 
   def initialize(vars)
     keys = vars.keys.sort
-    unless keys == [:choices, :index, :search_string].sort
+    unless keys == [:choices, :index, :search_string, :done].sort
       raise "World got the wrong set of keys: #{keys}"
     end
 
@@ -60,10 +60,14 @@ class World
     @choices = vars[:choices]
     @index = vars[:index]
     @search_string = vars[:search_string]
+    @done = vars[:done]
   end
 
   def self.blank(choices)
-    new(:choices => choices, :index => 0, :search_string => "")
+    new(:choices => choices,
+        :index => 0,
+        :search_string => "",
+        :done => false)
   end
 
   def merge(vars)
@@ -71,11 +75,11 @@ class World
   end
 
   def done?
-    false
+    @done
   end
 
   def selected_choice
-    @choices.fetch(@index)
+    matches.fetch(@index)
   end
 
   def down
@@ -108,19 +112,7 @@ class World
   end
 
   def done
-    Selection.new(matches.fetch(index))
-  end
-end
-
-class Selection
-  attr_reader :selection
-
-  def initialize(selection)
-    @selection = selection
-  end
-
-  def done?
-    true
+    merge(:done => true)
   end
 end
 
