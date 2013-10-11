@@ -85,6 +85,9 @@ def handle_key(world)
   end
 end
 
+class Rendered < Struct.new(:lines, :cursor_position)
+end
+
 def render(world, screen, start_line)
   line_count = screen.height - start_line
   matching = world.matching_options
@@ -92,10 +95,15 @@ def render(world, screen, start_line)
   matching += [""] * (line_count - matching.length)
   search_line = "> " + world.search_string
   lines = [search_line,
-           Text[:red, matching[0]]]
+           Text[:red, matching[0]]] + matching[1..-1]
+  Rendered.new(lines, [start_line, search_line.length])
+end
+
+def render!(world, screen, start_line)
+  rendered = render(world, screen, start_line)
   screen.with_cursor_hidden do
-    screen.write_lines(start_line, lines + matching[1..-1])
-    screen.move_cursor(start_line, search_line.length)
+    screen.write_lines(start_line, rendered.lines)
+    screen.move_cursor(*rendered.cursor_position)
   end
 end
 
@@ -107,7 +115,7 @@ def main
   Screen.with_screen do |screen|
     start_line = screen.height - 10
     while not world.done?
-      render(world, screen, start_line)
+      render!(world, screen, start_line)
       world = handle_key(world)
     end
     screen.move_cursor(screen.height - 1, 0)
