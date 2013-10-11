@@ -86,8 +86,8 @@ def handle_key(world)
 end
 
 class Renderer < Struct.new(:world, :screen, :start_line)
-  def render!
-    rendered = render
+  def self.render!(world, screen, start_line)
+    rendered = Renderer.new(world, screen, start_line).render
     screen.with_cursor_hidden do
       screen.write_lines(start_line, rendered.lines)
       screen.move_cursor(*rendered.cursor_position)
@@ -124,7 +124,7 @@ def main
   Screen.with_screen do |screen|
     start_line = screen.height - 10
     while not world.done?
-      Renderer.new(world, screen, start_line).render!
+      Renderer.render!(world, screen, start_line)
       world = handle_key(world)
     end
     screen.move_cursor(screen.height - 1, 0)
