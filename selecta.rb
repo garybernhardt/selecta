@@ -127,13 +127,7 @@ class Renderer < Struct.new(:world, :screen)
   def render
     search_line = "> " + world.search_string
     matches = correct_match_count(world.matches)
-    matches = matches.each_with_index.map do |match, index|
-      if index == world.index
-        Text[:red, match]
-      else
-        match
-      end
-    end
+    matches[world.index] = Text[:default_black, matches.fetch(world.index)]
     choices = [search_line] + matches
     Rendered.new(choices, search_line)
   end
@@ -247,8 +241,12 @@ class Screen
       elsif component == :highlight
         highlight = true
       else
-        color = component
-        ansi.color!(color, highlight ? :black : :default)
+        if component =~ /_/
+          fg, bg = component.to_s.split(/_/).map(&:to_sym)
+        else
+          fg, bg = component, :default
+        end
+        ansi.color!(fg, bg)
       end
     end
     remaining_cols = width - column
