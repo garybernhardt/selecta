@@ -43,14 +43,14 @@ class World
 
   def append_search_string(string)
     if string =~ /[[:print:]]/
-      World.new(@choices, @index, @search_string + string)
+      World.new(@choices, 0, @search_string + string)
     else
       self
     end
   end
 
   def backspace
-    World.new(@choices, @index, @search_string[0...-1])
+    World.new(@choices, 0, @search_string[0...-1])
   end
 
   def delete_backward_word
