@@ -162,10 +162,12 @@ class Renderer < Struct.new(:world, :screen)
 end
 
 def main
-  OPTIONS.visible_choices.times { puts }
   choices = $stdin.readlines.map(&:chomp)
   world = World.blank(choices)
   TTY.with_tty do |tty|
+    # We emit the number of lines we'll use later so we don't clobber whatever
+    # was already on the screen.
+    (OPTIONS.visible_choices + 1).times { tty.puts }
     Screen.with_tty(tty) do |screen|
       while not world.done?
         Renderer.render!(world, screen)
