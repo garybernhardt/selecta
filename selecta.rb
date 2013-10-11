@@ -206,7 +206,6 @@ class Screen
     # cbreak: Set up lots of standard stuff, including INTR signal on ^C
     # dsusp undef: Unmap delayed suspend (^Y by default)
     tty.stty("raw -echo cbreak dsusp undef")
-    ansi.reset!
   end
 
   def restore_tty
