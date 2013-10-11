@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 require "io/console"
 
 # I don't know how to get these key codes other than by hard-coding the
