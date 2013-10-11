@@ -3,10 +3,10 @@ require "io/console"
 # I don't know how to get these key codes other than by hard-coding the
 # ordinals
 KEY_CTRL_C = 3.chr
-KEY_DELETE = 127.chr
-KEY_CTRL_W = 23.chr
-KEY_CTRL_P = 16.chr
 KEY_CTRL_N = 14.chr
+KEY_CTRL_P = 16.chr
+KEY_CTRL_W = 23.chr
+KEY_DELETE = 127.chr
 
 class Options < Struct.new(:visible_choices)
 end
