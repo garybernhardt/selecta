@@ -42,7 +42,7 @@ class World
   end
 
   def append_search_string(string)
-    World.new(@choices, -1, @search_string + string)
+    World.new(@choices, 0, @search_string + string)
   end
 
   def backspace
