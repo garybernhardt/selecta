@@ -167,7 +167,7 @@ def main
   TTY.with_tty do |tty|
     # We emit the number of lines we'll use later so we don't clobber whatever
     # was already on the screen.
-    (OPTIONS.visible_choices + 1).times { tty.puts }
+    (OPTIONS.visible_choices).times { tty.puts }
     Screen.with_tty(tty) do |screen|
       while not world.done?
         Renderer.render!(world, screen)
@@ -210,7 +210,6 @@ class Screen
 
   def restore_tty
     tty.stty("#{@original_stty_state}")
-    tty.puts
   end
 
   def suspend
