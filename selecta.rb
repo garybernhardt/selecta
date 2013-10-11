@@ -146,8 +146,8 @@ def main
   source_file = ARGV.fetch(0)
   choices = IO.readlines(source_file).map(&:chomp)
   world = World.blank(choices)
-  Screen.with_screen($stdout) do |screen|
-    TTY.with_tty do |tty|
+  TTY.with_tty do |tty|
+    Screen.with_screen($stdout) do |screen|
       while not world.done?
         Renderer.render!(world, screen)
         world = handle_key(world, tty.get_char)
