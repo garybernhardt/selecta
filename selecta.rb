@@ -86,8 +86,8 @@ def handle_key(world)
 end
 
 def render(world, screen, start_line)
-  matching = world.matching_options
   line_count = screen.height - start_line
+  matching = world.matching_options
   matching = matching[0, line_count - 1]
   matching += [""] * (line_count - matching.length)
   search_line = "> " + world.search_string
