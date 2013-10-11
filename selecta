@@ -50,14 +50,24 @@ end
 class World
   attr_reader :choices, :index, :search_string
 
-  def initialize(choices, index, search_string)
-    @choices = choices
-    @index = index
-    @search_string = search_string
+  def initialize(vars)
+    keys = vars.keys.sort
+    unless keys == [:choices, :index, :search_string].sort
+      raise "World got the wrong set of keys: #{keys}"
+    end
+
+    @vars = vars
+    @choices = vars[:choices]
+    @index = vars[:index]
+    @search_string = vars[:search_string]
   end
 
   def self.blank(choices)
-    new(choices, 0, "")
+    new(:choices => choices, :index => 0, :search_string => "")
+  end
+
+  def merge(vars)
+    World.new(@vars.merge(vars))
   end
 
   def done?
@@ -70,23 +80,25 @@ class World
 
   def down
     index = [@index + 1, matches.count - 1, OPTIONS.visible_choices - 1].min
-    World.new(choices, index, @search_string)
+    merge(:index => index)
   end
 
   def up
-    World.new(choices, [@index - 1, 0].max, @search_string)
+    merge(:index => [@index - 1, 0].max)
   end
 
   def append_search_string(string)
-    World.new(@choices, 0, @search_string + string)
+    merge(:index => 0,
+          :search_string => @search_string + string)
   end
 
   def backspace
-    World.new(@choices, 0, @search_string[0...-1])
+    merge(:index => 0,
+          :search_string => @search_string[0...-1])
   end
 
   def delete_backward_word
-    World.new(@choices, @index, @search_string.sub(/[^ ]* *$/, ""))
+    merge(:search_string => @search_string.sub(/[^ ]* *$/, ""))
   end
 
   def matches
