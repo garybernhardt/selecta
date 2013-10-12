@@ -12,4 +12,8 @@ describe World do
   it "moves down the list" do
     world.down.selected_choice.should == "two"
   end
+
+  it "move up the list" do
+    world.down.up.selected_choice.should == "one"
+  end
 end
