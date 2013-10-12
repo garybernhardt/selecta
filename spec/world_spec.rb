@@ -1,5 +1,9 @@
-# We can't use require because the script doesn't end in .rb.
-load File.expand_path("../../selecta", __FILE__)
+# We can't use `require` or `load` because of the Bash preamble on the script.
+source = File.read(File.expand_path("../../selecta", __FILE__))
+preamble, source = source.split("#!ruby", 2)
+eval(source)
+
+#load File.expand_path("../../selecta", __FILE__)
 
 describe World do
   let(:options) { Options.new(20) }
