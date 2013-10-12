@@ -31,10 +31,6 @@ describe World do
     world.down.up.selected_choice.should == "one"
   end
 
-  it "filters by substring" do
-    world.append_search_string("e").matches.should == ["one", "three"]
-  end
-
   it "backspaces over characters" do
     world = self.world.append_search_string("e")
     world.query.should == "e"
@@ -49,5 +45,26 @@ describe World do
     world.append_search_string("a b").delete_word.query.should == "a "
     world.append_search_string("a b ").delete_word.query.should == "a "
     world.append_search_string(" a b").delete_word.query.should == " a "
+  end
+
+  describe "matching" do
+    it "is fuzzy" do
+      world.append_search_string("e").matches.should == ["one", "three"]
+      world.append_search_string("oe").matches.should == ["one"]
+    end
+
+    it "is case insensitive" do
+      world.append_search_string("OE").matches.should == ["one"]
+    end
+
+    it "matches punctuation" do
+      world = World.blank(options, ["/! symbols $^"])
+      world.append_search_string("/!$^").matches.should == ["/! symbols $^"]
+    end
+  end
+
+  it "knows when it's done" do
+    world.done?.should == false
+    world.done.done?.should == true
   end
 end
