@@ -376,15 +376,20 @@ class TTY < Struct.new(:in_file, :out_file)
   end
 
   def stty(args)
-    command("stty -f #{out_file.path} #{args}")
+    command("stty #{args}")
   end
 
   private
 
+  # Run a command with the TTY as stdin, capturing the output via a pipe
   def command(command)
-    result = `#{command}`
-    raise "Command failed: #{command.inspect}" unless $?.success?
-    result
+    IO.pipe do |read_io, write_io|
+      pid = Process.spawn(command, :in => "/dev/tty", :out => write_io)
+      Process.wait(pid)
+      raise "Command failed: #{command.inspect}" unless $?.success?
+      write_io.close
+      read_io.read
+    end
   end
 end
 
