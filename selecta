@@ -371,12 +371,12 @@ class TTY < Struct.new(:in_file, :out_file)
     out_file.puts
   end
 
-  def stty(args)
-    command("stty -f #{out_file.path} #{args}")
-  end
-
   def winsize
     out_file.winsize
+  end
+
+  def stty(args)
+    command("stty -f #{out_file.path} #{args}")
   end
 
   private
