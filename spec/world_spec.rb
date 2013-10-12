@@ -43,6 +43,11 @@ describe World do
   end
 
   it "deletes words" do
-    world.append_search_string("a b c").delete_word.query.should == "a b "
+    world.append_search_string("").delete_word.query.should == ""
+    world.append_search_string("a").delete_word.query.should == ""
+    world.append_search_string("a ").delete_word.query.should == ""
+    world.append_search_string("a b").delete_word.query.should == "a "
+    world.append_search_string("a b ").delete_word.query.should == "a "
+    world.append_search_string(" a b").delete_word.query.should == " a "
   end
 end
