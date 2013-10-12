@@ -23,9 +23,15 @@ describe World do
       world = World.blank(options, ["one", "two", "three"])
       world.down.down.down.selected_choice.should == "two"
     end
+
+    it "moves down the filtered search results"
   end
 
   it "move up the list" do
     world.down.up.selected_choice.should == "one"
+  end
+
+  it "filters by substring" do
+    world.append_search_string("e").matches.should == ["one", "three"]
   end
 end
