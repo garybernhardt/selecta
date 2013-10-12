@@ -11,12 +11,13 @@ KEY_CTRL_W = 23.chr
 KEY_DELETE = 127.chr
 
 def main
+  options = Options.new(20)
   choices = $stdin.readlines.map(&:chomp).sort_by(&:length)
-  world = World.blank(choices)
+  world = World.blank(options, choices)
   Screen.with_screen do |screen, tty|
     # We emit the number of lines we'll use later so we don't clobber whatever
     # was already on the screen.
-    (OPTIONS.visible_choices).times { tty.puts }
+    (options.visible_choices).times { tty.puts }
     while not world.done?
       Renderer.render!(world, screen)
       world = handle_key(world, tty.get_char)
@@ -48,18 +49,20 @@ class Options < Struct.new(:visible_choices)
 end
 
 class World
-  attr_reader :choices, :index, :search_string
+  attr_reader :choices, :index, :search_string, :options
 
   def initialize(vars)
     @vars = vars
+    @options = vars.fetch(:options)
     @choices = vars.fetch(:choices)
     @index = vars.fetch(:index)
     @search_string = vars.fetch(:search_string)
     @done = vars.fetch(:done)
   end
 
-  def self.blank(choices)
-    new(:choices => choices,
+  def self.blank(options, choices)
+    new(:options => options,
+        :choices => choices,
         :index => 0,
         :search_string => "",
         :done => false)
@@ -78,7 +81,7 @@ class World
   end
 
   def down
-    index = [@index + 1, matches.count - 1, OPTIONS.visible_choices - 1].min
+    index = [@index + 1, matches.count - 1, options.visible_choices - 1].min
     merge(:index => index)
   end
 
@@ -114,7 +117,7 @@ end
 class Renderer < Struct.new(:world, :screen)
   def self.render!(world, screen)
     rendered = Renderer.new(world, screen).render
-    start_line = screen.height - OPTIONS.visible_choices - 1
+    start_line = screen.height - world.options.visible_choices - 1
     screen.with_cursor_hidden do
       screen.write_lines(start_line, rendered.choices)
       screen.move_cursor(start_line, rendered.search_line.length)
@@ -133,8 +136,8 @@ class Renderer < Struct.new(:world, :screen)
   end
 
   def correct_match_count(matches)
-    limited = matches[0, OPTIONS.visible_choices]
-    padded = limited + [""] * (OPTIONS.visible_choices - limited.length)
+    limited = matches[0, world.options.visible_choices]
+    padded = limited + [""] * (world.options.visible_choices - limited.length)
     padded
   end
 
@@ -386,7 +389,6 @@ class TTY < Struct.new(:in_file, :out_file)
 end
 
 if $0 == __FILE__
-  OPTIONS = Options.new(20)
   begin
     main
   rescue SystemExit, Interrupt
