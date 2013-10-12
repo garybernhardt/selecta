@@ -34,4 +34,15 @@ describe World do
   it "filters by substring" do
     world.append_search_string("e").matches.should == ["one", "three"]
   end
+
+  it "backspaces over characters" do
+    world = self.world.append_search_string("e")
+    world.search_string.should == "e"
+    world = world.backspace
+    world.search_string.should == ""
+  end
+
+  it "deletes words" do
+    world.append_search_string("a b c").delete_backward_word.search_string.should == "a b "
+  end
 end
