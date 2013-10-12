@@ -33,7 +33,7 @@ def handle_key(world, key)
   when KEY_CTRL_N then world.down
   when KEY_CTRL_P then world.up
 
-  when KEY_CTRL_W then world.delete_backward_word
+  when KEY_CTRL_W then world.delete_word
   when KEY_DELETE then world.backspace
 
   when ?\r then world.done
@@ -49,14 +49,14 @@ class Options < Struct.new(:visible_choices)
 end
 
 class World
-  attr_reader :choices, :index, :search_string, :options
+  attr_reader :choices, :index, :query, :options
 
   def initialize(vars)
     @vars = vars
     @options = vars.fetch(:options)
     @choices = vars.fetch(:choices)
     @index = vars.fetch(:index)
-    @search_string = vars.fetch(:search_string)
+    @query = vars.fetch(:query)
     @done = vars.fetch(:done)
   end
 
@@ -64,7 +64,7 @@ class World
     new(:options => options,
         :choices => choices,
         :index => 0,
-        :search_string => "",
+        :query => "",
         :done => false)
   end
 
@@ -91,20 +91,20 @@ class World
 
   def append_search_string(string)
     merge(:index => 0,
-          :search_string => @search_string + string)
+          :query => @query + string)
   end
 
   def backspace
     merge(:index => 0,
-          :search_string => @search_string[0...-1])
+          :query => @query[0...-1])
   end
 
-  def delete_backward_word
-    merge(:search_string => @search_string.sub(/[^ ]* *$/, ""))
+  def delete_word
+    merge(:query => @query.sub(/[^ ]* *$/, ""))
   end
 
   def matches
-    re = search_string.split(//).map(&Regexp.method(:escape)).join('.*')
+    re = query.split(//).map(&Regexp.method(:escape)).join('.*')
     re = /#{re}/i
     @choices.select { |s| s =~ re }
   end
@@ -125,7 +125,7 @@ class Renderer < Struct.new(:world, :screen)
   end
 
   def render
-    search_line = "> " + world.search_string
+    search_line = "> " + world.query
     matches = world.matches
     unless matches.empty?
       matches[world.index] = Text[:default_black, matches.fetch(world.index)]

@@ -37,12 +37,12 @@ describe World do
 
   it "backspaces over characters" do
     world = self.world.append_search_string("e")
-    world.search_string.should == "e"
+    world.query.should == "e"
     world = world.backspace
-    world.search_string.should == ""
+    world.query.should == ""
   end
 
   it "deletes words" do
-    world.append_search_string("a b c").delete_backward_word.search_string.should == "a b "
+    world.append_search_string("a b c").delete_word.query.should == "a b "
   end
 end
