@@ -9,8 +9,20 @@ describe World do
     world.selected_choice.should == "one"
   end
 
-  it "moves down the list" do
-    world.down.selected_choice.should == "two"
+  describe "moving down the list" do
+    it "moves down the list" do
+      world.down.selected_choice.should == "two"
+    end
+
+    it "won't move past the end of the list" do
+      world.down.down.down.down.selected_choice.should == "three"
+    end
+
+    it "won't move past the visible choice limit" do
+      options = Options.new(2)
+      world = World.blank(options, ["one", "two", "three"])
+      world.down.down.down.selected_choice.should == "two"
+    end
   end
 
   it "move up the list" do
