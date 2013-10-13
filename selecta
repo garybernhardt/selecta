@@ -33,6 +33,7 @@ class Selecta
     puts world.selected_choice
   end
 
+  # Initialize the screen (and tear it down properly when done).
   def run_in_screen(options, world)
     Screen.with_screen do |screen, tty|
       # We emit the number of lines we'll use later so we don't clobber whatever
@@ -48,6 +49,7 @@ class Selecta
     end
   end
 
+  # Use the world state and screen to process user actions until they quit.
   def ui_event_loop(world, screen, tty)
     while not world.done?
       Renderer.render!(world, screen)
@@ -55,23 +57,24 @@ class Selecta
     end
     world
   end
-end
 
-def handle_key(world, key)
-  case key
+  # On each keystroke, generate a new world
+  def handle_key(world, key)
+    case key
 
-  when KEY_CTRL_N then world.down
-  when KEY_CTRL_P then world.up
+    when KEY_CTRL_N then world.down
+    when KEY_CTRL_P then world.up
 
-  when KEY_CTRL_W then world.delete_word
-  when KEY_DELETE then world.backspace
+    when KEY_CTRL_W then world.delete_word
+    when KEY_DELETE then world.backspace
 
-  when ?\r then world.done
-  when KEY_CTRL_C then raise SystemExit
+    when ?\r then world.done
+    when KEY_CTRL_C then raise SystemExit
 
-  when /[[:print:]]/ then world.append_search_string(key.chr)
+    when /[[:print:]]/ then world.append_search_string(key.chr)
 
-  else world
+    else world
+    end
   end
 end
 
