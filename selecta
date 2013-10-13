@@ -266,7 +266,7 @@ class Screen
         ansi.color!(fg, bg)
       end
     end
-    remaining_cols = width - column
+    remaining_cols = [width - column, 0].max
     ansi.addstr!(" " * remaining_cols)
   end
 end
