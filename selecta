@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# vim: set ft=ruby:
 
 # This file executes as a bash script, which turns around and executes Ruby via
 # the line below. The -x argument to Ruby makes it discard everything before
