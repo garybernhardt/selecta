@@ -1,4 +1,16 @@
-#!/usr/bin/env ruby --disable-gems
+#!/usr/bin/env bash
+
+# This file executes as a bash script, which turns around and executes Ruby via
+# the line below. The -x argument to Ruby makes it discard everything before
+# the second "!ruby" shebang. This allows us to work on Linux, where the
+# shebang can only have one argument so we can't directly say
+# "#!/usr/bin/env ruby --disable-gems". Thanks for that, Linux.
+#
+# If this seems confusing, don't worry. You can treat it as a normal Ruby file
+# starting with the "!ruby" shebang below.
+
+exec /usr/bin/env ruby --disable-gems -x "$0"
+#!ruby
 
 require "io/console"
 
@@ -172,8 +184,7 @@ class Screen
     # raw: Disable input and output processing
     # -echo: Don't echo keys back
     # cbreak: Set up lots of standard stuff, including INTR signal on ^C
-    # dsusp undef: Unmap delayed suspend (^Y by default)
-    tty.stty("raw -echo cbreak dsusp undef")
+    tty.stty("raw -echo cbreak")
   end
 
   def restore_tty
@@ -371,20 +382,25 @@ class TTY < Struct.new(:in_file, :out_file)
     out_file.puts
   end
 
-  def stty(args)
-    command("stty -f #{out_file.path} #{args}")
-  end
-
   def winsize
     out_file.winsize
   end
 
+  def stty(args)
+    command("stty #{args}")
+  end
+
   private
 
+  # Run a command with the TTY as stdin, capturing the output via a pipe
   def command(command)
-    result = `#{command}`
-    raise "Command failed: #{command.inspect}" unless $?.success?
-    result
+    IO.pipe do |read_io, write_io|
+      pid = Process.spawn(command, :in => "/dev/tty", :out => write_io)
+      Process.wait(pid)
+      raise "Command failed: #{command.inspect}" unless $?.success?
+      write_io.close
+      read_io.read
+    end
   end
 end
 
