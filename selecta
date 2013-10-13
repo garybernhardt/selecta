@@ -28,17 +28,32 @@ class Selecta
     options = Options.new(20)
     choices = $stdin.readlines.map(&:chomp).sort_by(&:length)
     world = World.blank(options, choices)
+
+    world = run_in_screen(options, world)
+    puts world.selected_choice
+  end
+
+  def run_in_screen(options, world)
     Screen.with_screen do |screen, tty|
       # We emit the number of lines we'll use later so we don't clobber whatever
       # was already on the screen.
       (options.visible_choices).times { tty.puts }
-      while not world.done?
-        Renderer.render!(world, screen)
-        world = handle_key(world, tty.get_char)
+      begin
+        ui_event_loop(world, screen, tty)
+      ensure
+        # Always move the cursor to the bottom so the next program doesn't draw
+        # over whatever we left on the screen.
+        screen.move_cursor(screen.height - 1, 0)
       end
-      screen.move_cursor(screen.height - 1, 0)
     end
-    puts world.selected_choice
+  end
+
+  def ui_event_loop(world, screen, tty)
+    while not world.done?
+      Renderer.render!(world, screen)
+      world = handle_key(world, tty.get_char)
+    end
+    world
   end
 end
 
