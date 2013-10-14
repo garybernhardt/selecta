@@ -1,13 +1,8 @@
-# We can't use `require` or `load` because of the Bash preamble on the script.
-source = File.read(File.expand_path("../../selecta", __FILE__))
-preamble, source = source.split("#!ruby", 2)
-eval(source)
-
-#load File.expand_path("../../selecta", __FILE__)
+require_relative "spec_helper"
 
 describe Search do
-  let(:options) { Options.new(20) }
-  let(:world) { Search.blank(options, ["one", "two", "three"]) }
+  let(:config) { Configuration.from_inputs(["one", "two", "three"]) }
+  let(:world) { Search.blank(config) }
 
   it "selects the first choice by default" do
     world.selected_choice.should == "one"
@@ -23,8 +18,8 @@ describe Search do
     end
 
     it "won't move past the visible choice limit" do
-      options = Options.new(2)
-      world = Search.blank(options, ["one", "two", "three"])
+      config = Configuration.new(2, ["one", "two", "three"])
+      world = Search.blank(config)
       world.down.down.down.selected_choice.should == "two"
     end
 
@@ -62,7 +57,8 @@ describe Search do
     end
 
     it "matches punctuation" do
-      world = Search.blank(options, ["/! symbols $^"])
+      config = Configuration.from_inputs(["/! symbols $^"])
+      world = Search.blank(config)
       world.append_search_string("/!$^").matches.should == ["/! symbols $^"]
     end
   end
