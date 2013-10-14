@@ -27,20 +27,20 @@ class Selecta
   def main
     options = Options.new(20)
     choices = $stdin.readlines.map(&:chomp).sort_by(&:length)
-    world = World.blank(options, choices)
+    search = Search.blank(options, choices)
 
-    world = run_in_screen(options, world)
-    puts world.selected_choice
+    search = run_in_screen(options, search)
+    puts search.selected_choice
   end
 
   # Initialize the screen (and tear it down properly when done).
-  def run_in_screen(options, world)
+  def run_in_screen(options, search)
     Screen.with_screen do |screen, tty|
       # We emit the number of lines we'll use later so we don't clobber whatever
       # was already on the screen.
       (options.visible_choices).times { tty.puts }
       begin
-        ui_event_loop(world, screen, tty)
+        ui_event_loop(search, screen, tty)
       ensure
         # Always move the cursor to the bottom so the next program doesn't draw
         # over whatever we left on the screen.
@@ -49,31 +49,31 @@ class Selecta
     end
   end
 
-  # Use the world state and screen to process user actions until they quit.
-  def ui_event_loop(world, screen, tty)
-    while not world.done?
-      Renderer.render!(world, screen)
-      world = handle_key(world, tty.get_char)
+  # Use the search and screen to process user actions until they quit.
+  def ui_event_loop(search, screen, tty)
+    while not search.done?
+      Renderer.render!(search, screen)
+      search = handle_key(search, tty.get_char)
     end
-    world
+    search
   end
 
-  # On each keystroke, generate a new world
-  def handle_key(world, key)
+  # On each keystroke, generate a new search object
+  def handle_key(search, key)
     case key
 
-    when KEY_CTRL_N then world.down
-    when KEY_CTRL_P then world.up
+    when KEY_CTRL_N then search.down
+    when KEY_CTRL_P then search.up
 
-    when KEY_CTRL_W then world.delete_word
-    when KEY_DELETE then world.backspace
+    when KEY_CTRL_W then search.delete_word
+    when KEY_DELETE then search.backspace
 
-    when ?\r then world.done
+    when ?\r then search.done
     when KEY_CTRL_C then raise SystemExit
 
-    when /[[:print:]]/ then world.append_search_string(key.chr)
+    when /[[:print:]]/ then search.append_search_string(key.chr)
 
-    else world
+    else search
     end
   end
 end
@@ -81,7 +81,7 @@ end
 class Options < Struct.new(:visible_choices)
 end
 
-class World
+class Search
   attr_reader :choices, :index, :query, :options
 
   def initialize(vars)
@@ -102,7 +102,7 @@ class World
   end
 
   def merge(vars)
-    World.new(@vars.merge(vars))
+    Search.new(@vars.merge(vars))
   end
 
   def done?
@@ -147,10 +147,10 @@ class World
   end
 end
 
-class Renderer < Struct.new(:world, :screen)
-  def self.render!(world, screen)
-    rendered = Renderer.new(world, screen).render
-    start_line = screen.height - world.options.visible_choices - 1
+class Renderer < Struct.new(:search, :screen)
+  def self.render!(search, screen)
+    rendered = Renderer.new(search, screen).render
+    start_line = screen.height - search.options.visible_choices - 1
     screen.with_cursor_hidden do
       screen.write_lines(start_line, rendered.choices)
       screen.move_cursor(start_line, rendered.search_line.length)
@@ -158,10 +158,10 @@ class Renderer < Struct.new(:world, :screen)
   end
 
   def render
-    search_line = "> " + world.query
-    matches = world.matches
+    search_line = "> " + search.query
+    matches = search.matches
     unless matches.empty?
-      matches[world.index] = Text[:default_black, matches.fetch(world.index)]
+      matches[search.index] = Text[:default_black, matches.fetch(search.index)]
     end
     matches = correct_match_count(matches)
     choices = [search_line] + matches
@@ -169,8 +169,8 @@ class Renderer < Struct.new(:world, :screen)
   end
 
   def correct_match_count(matches)
-    limited = matches[0, world.options.visible_choices]
-    padded = limited + [""] * (world.options.visible_choices - limited.length)
+    limited = matches[0, search.options.visible_choices]
+    padded = limited + [""] * (search.options.visible_choices - limited.length)
     padded
   end
 
