@@ -30,6 +30,8 @@ Selecta does not:
 - Know about any editors (including vim).
 - Know what it's searching.
 - Perform any actions on the item you select.
+- Change the order of the choices piped in. (But you can always put a `| sort
+  |` in your pipeline if you want them sorted.)
 
 It supports these keys:
 
