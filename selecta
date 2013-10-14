@@ -29,19 +29,19 @@ KEY_DELETE = 127.chr
 
 class Selecta
   def main
-    options = Options.from_inputs($stdin.readlines)
-    search = Search.blank(options)
+    config = Configuration.from_inputs($stdin.readlines)
+    search = Search.blank(config)
 
-    search = run_in_screen(options, search)
+    search = run_in_screen(config, search)
     puts search.selected_choice
   end
 
   # Initialize the screen (and tear it down properly when done).
-  def run_in_screen(options, search)
+  def run_in_screen(config, search)
     Screen.with_screen do |screen, tty|
       # We emit the number of lines we'll use later so we don't clobber whatever
       # was already on the screen.
-      (options.visible_choices).times { tty.puts }
+      (config.visible_choices).times { tty.puts }
       begin
         ui_event_loop(search, screen, tty)
       ensure
@@ -81,7 +81,7 @@ class Selecta
   end
 end
 
-class Options < Struct.new(:visible_choices, :choices)
+class Configuration < Struct.new(:visible_choices, :choices)
   def initialize(visible_choices, choices)
     # Constructor is defined to force argument presence; otherwise Struct
     # defaults missing arguments to nil
@@ -90,7 +90,7 @@ class Options < Struct.new(:visible_choices, :choices)
 
   def self.from_inputs(choices)
     choices = massage_choices(choices)
-    Options.new(20, choices)
+    Configuration.new(20, choices)
   end
 
   def self.massage_choices(choices)
@@ -111,20 +111,20 @@ class Options < Struct.new(:visible_choices, :choices)
 end
 
 class Search
-  attr_reader :choices, :index, :query, :options
+  attr_reader :choices, :index, :query, :config
 
   def initialize(vars)
     @vars = vars
-    @options = vars.fetch(:options)
+    @config = vars.fetch(:config)
     @choices = vars.fetch(:choices)
     @index = vars.fetch(:index)
     @query = vars.fetch(:query)
     @done = vars.fetch(:done)
   end
 
-  def self.blank(options)
-    new(:options => options,
-        :choices => options.choices,
+  def self.blank(config)
+    new(:config => config,
+        :choices => config.choices,
         :index => 0,
         :query => "",
         :done => false)
@@ -143,7 +143,7 @@ class Search
   end
 
   def down
-    index = [@index + 1, matches.count - 1, options.visible_choices - 1].min
+    index = [@index + 1, matches.count - 1, config.visible_choices - 1].min
     merge(:index => index)
   end
 
@@ -179,7 +179,7 @@ end
 class Renderer < Struct.new(:search, :screen)
   def self.render!(search, screen)
     rendered = Renderer.new(search, screen).render
-    start_line = screen.height - search.options.visible_choices - 1
+    start_line = screen.height - search.config.visible_choices - 1
     screen.with_cursor_hidden do
       screen.write_lines(start_line, rendered.choices)
       screen.move_cursor(start_line, rendered.search_line.length)
@@ -198,8 +198,8 @@ class Renderer < Struct.new(:search, :screen)
   end
 
   def correct_match_count(matches)
-    limited = matches[0, search.options.visible_choices]
-    padded = limited + [""] * (search.options.visible_choices - limited.length)
+    limited = matches[0, search.config.visible_choices]
+    padded = limited + [""] * (search.config.visible_choices - limited.length)
     padded
   end
 
