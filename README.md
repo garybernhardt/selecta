@@ -73,20 +73,26 @@ endfunction
 map <leader>f :call SelectaCommand("find * -type f", ":e")<cr>
 ```
 
-## FAQ
+## Examples
 
-**Won't this be slow?**
+### Check out a git branch
 
-Nope: startup and termination together burn about 23 ms of CPU on my machine (a
-mid-2011 MacBook Air). File finding may be slow, but, speaking of that...
+```
+$ git branch | cut -c 3- | selecta | xargs git checkout
+```
 
-**What about caching, selecting only certain file types, etc.?**
+When you say `git branch`, you get something like this:
 
-Those are different problems. This is just a simple fuzzy finding user
-interface. It could be combined with caching, etc. I don't use caching myself,
-prefering to keep repos small, so no-caching was a design requirement.
+```
+* master
+  mytopic
+  release
+```
 
-**What do you mean it can find things other than files?**
+The `cut` removes those first two columns. Then we just select a branch and use
+it as an argument to `git checkout`.
+
+### Open tags in Vim
 
 Suppose you use ctags, and want to fuzzy-select from them. This shell command
 will give you a list of tags:
@@ -109,3 +115,16 @@ map <leader>t :SelectaTag<cr>
 
 Now, when you hit `<leader>t`, it will prompt you to fuzzy-select a
 function/class/whatever, then will jump to the definition of that object.
+
+## FAQ
+
+**Won't this be slow?**
+
+Nope: startup and termination together burn about 23 ms of CPU on my machine (a
+mid-2011 MacBook Air). File finding may be slow, but, speaking of that...
+
+**What about caching, selecting only certain file types, etc.?**
+
+Those are different problems. This is just a simple fuzzy finding user
+interface. It could be combined with caching, etc. I don't use caching myself,
+prefering to keep repos small, so no-caching was a design requirement.
