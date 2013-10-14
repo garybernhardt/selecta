@@ -29,21 +29,8 @@ KEY_DELETE = 127.chr
 
 class Selecta
   def main
-    options = Options.new(20)
-    choices = $stdin.readlines.map(&:chomp).sort_by(&:length).map do |choice|
-      # Encoding to UTF-8 with `:invalid => :replace` isn't good enough; it
-      # still leaves some invalid characters. For example, this string will fail:
-      #
-      # echo "девуш\xD0:" | selecta
-      #
-      # Round-tripping through UTF-16, with `:invalid => :replace` as well,
-      # fixes this. I don't understand why. I found it via:
-      #
-      # http://stackoverflow.com/questions/2982677/ruby-1-9-invalid-byte-sequence-in-utf-8
-      utf16 = choice.encode('UTF-16', 'UTF-8', :invalid => :replace, :replace => '')
-      utf16.encode('UTF-8', 'UTF-16')
-    end
-    search = Search.blank(options, choices)
+    options = Options.from_inputs($stdin.readlines)
+    search = Search.blank(options)
 
     search = run_in_screen(options, search)
     puts search.selected_choice
@@ -94,7 +81,33 @@ class Selecta
   end
 end
 
-class Options < Struct.new(:visible_choices)
+class Options < Struct.new(:visible_choices, :choices)
+  def initialize(visible_choices, choices)
+    # Constructor is defined to force argument presence; otherwise Struct
+    # defaults missing arguments to nil
+    super
+  end
+
+  def self.from_inputs(choices)
+    choices = massage_choices(choices)
+    Options.new(20, choices)
+  end
+
+  def self.massage_choices(choices)
+    choices = choices.map(&:chomp).sort_by(&:length).map do |choice|
+      # Encoding to UTF-8 with `:invalid => :replace` isn't good enough; it
+      # still leaves some invalid characters. For example, this string will fail:
+      #
+      # echo "девуш\xD0:" | selecta
+      #
+      # Round-tripping through UTF-16, with `:invalid => :replace` as well,
+      # fixes this. I don't understand why. I found it via:
+      #
+      # http://stackoverflow.com/questions/2982677/ruby-1-9-invalid-byte-sequence-in-utf-8
+      utf16 = choice.encode('UTF-16', 'UTF-8', :invalid => :replace, :replace => '')
+      utf16.encode('UTF-8', 'UTF-16')
+    end
+  end
 end
 
 class Search
@@ -109,9 +122,9 @@ class Search
     @done = vars.fetch(:done)
   end
 
-  def self.blank(options, choices)
+  def self.blank(options)
     new(:options => options,
-        :choices => choices,
+        :choices => options.choices,
         :index => 0,
         :query => "",
         :done => false)

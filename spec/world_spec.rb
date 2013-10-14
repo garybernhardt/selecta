@@ -6,8 +6,8 @@ eval(source)
 #load File.expand_path("../../selecta", __FILE__)
 
 describe Search do
-  let(:options) { Options.new(20) }
-  let(:world) { Search.blank(options, ["one", "two", "three"]) }
+  let(:options) { Options.from_inputs(["one", "two", "three"]) }
+  let(:world) { Search.blank(options) }
 
   it "selects the first choice by default" do
     world.selected_choice.should == "one"
@@ -23,8 +23,8 @@ describe Search do
     end
 
     it "won't move past the visible choice limit" do
-      options = Options.new(2)
-      world = Search.blank(options, ["one", "two", "three"])
+      options = Options.new(2, ["one", "two", "three"])
+      world = Search.blank(options)
       world.down.down.down.selected_choice.should == "two"
     end
 
@@ -62,7 +62,8 @@ describe Search do
     end
 
     it "matches punctuation" do
-      world = Search.blank(options, ["/! symbols $^"])
+      options = Options.from_inputs(["/! symbols $^"])
+      world = Search.blank(options)
       world.append_search_string("/!$^").matches.should == ["/! symbols $^"]
     end
   end
