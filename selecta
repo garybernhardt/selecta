@@ -302,6 +302,15 @@ class Screen
     text.components.each do |component|
       if component.is_a? String
         ansi.setpos!(line, column)
+        # Don't draw off the edge of the screen.
+        #   - (column + component.length) is the number of bytes we'd draw if
+        #     we just dumped the string out.
+        #   - Subtracting that from width gives the number of bytes we should
+        #     draw to avoid going off the edge of the screen.
+        #   - Subtracting 1 from that gives us the zero-indexed location of the
+        #     last character we should draw.
+        chars_to_draw = width - (column + component.length) - 1
+        component = component[0..chars_to_draw]
         ansi.addstr!(component)
         column += component.length
       elsif component == :highlight
