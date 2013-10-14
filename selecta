@@ -94,7 +94,7 @@ class Configuration < Struct.new(:visible_choices, :choices)
   end
 
   def self.massage_choices(choices)
-    choices.sort_by(&:length).map do |choice|
+    choices.map do |choice|
       # Encoding to UTF-8 with `:invalid => :replace` isn't good enough; it
       # still leaves some invalid characters. For example, this string will fail:
       #
