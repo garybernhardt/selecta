@@ -1,9 +1,4 @@
-# We can't use `require` or `load` because of the Bash preamble on the script.
-source = File.read(File.expand_path("../../selecta", __FILE__))
-preamble, source = source.split("#!ruby", 2)
-eval(source)
-
-#load File.expand_path("../../selecta", __FILE__)
+require_relative "spec_helper"
 
 describe Search do
   let(:config) { Configuration.from_inputs(["one", "two", "three"]) }
