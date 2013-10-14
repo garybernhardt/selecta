@@ -94,7 +94,7 @@ class Configuration < Struct.new(:visible_choices, :choices)
   end
 
   def self.massage_choices(choices)
-    choices.map(&:strip).sort_by(&:length).map do |choice|
+    choices.sort_by(&:length).map do |choice|
       # Encoding to UTF-8 with `:invalid => :replace` isn't good enough; it
       # still leaves some invalid characters. For example, this string will fail:
       #
@@ -106,7 +106,7 @@ class Configuration < Struct.new(:visible_choices, :choices)
       # http://stackoverflow.com/questions/2982677/ruby-1-9-invalid-byte-sequence-in-utf-8
       utf16 = choice.encode('UTF-16', 'UTF-8', :invalid => :replace, :replace => '')
       utf16.encode('UTF-8', 'UTF-16')
-    end
+    end.map(&:strip)
   end
 end
 
