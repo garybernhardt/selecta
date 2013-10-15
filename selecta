@@ -189,7 +189,7 @@ class Renderer < Struct.new(:search, :screen)
     search_line = "> " + search.query
     matches = search.matches
     unless matches.empty?
-      matches[search.index] = Text[:default_black, matches.fetch(search.index)]
+      matches[search.index] = Text[:inverse, matches.fetch(search.index), :reset]
     end
     matches = correct_match_count(matches)
     choices = [search_line] + matches
@@ -314,6 +314,10 @@ class Screen
         column += component.length
       elsif component == :highlight
         highlight = true
+      elsif component == :inverse
+        ansi.inverse!
+      elsif component == :reset
+        ansi.reset!
       else
         if component =~ /_/
           fg, bg = component.to_s.split(/_/).map(&:to_sym)
@@ -361,7 +365,7 @@ class ANSI
     ESC + "[" + sequence
   end
 
-  def reset
+  def clear
     escape "2J"
   end
 
@@ -382,7 +386,6 @@ class ANSI
   end
 
   def color(fg, bg=:default)
-    normal = "22"
     fg_codes = {
       :black => 30,
       :red => 31,
@@ -407,13 +410,23 @@ class ANSI
     }
     fg_code = fg_codes.fetch(fg)
     bg_code = bg_codes.fetch(bg)
-    escape "#{normal};#{fg_code};#{bg_code}m"
+    escape "#{fg_code};#{bg_code}m"
   end
 
-  def reset!(*args); write reset(*args); end
+  def inverse
+    escape("7m")
+  end
+
+  def reset
+    escape("0m")
+  end
+
+  def clear!(*args); write clear(*args); end
   def setpos!(*args); write setpos(*args); end
   def addstr!(*args); write addstr(*args); end
   def color!(*args); write color(*args); end
+  def inverse!(*args); write inverse(*args); end
+  def reset!(*args); write reset(*args); end
   def hide_cursor!(*args); write hide_cursor(*args); end
   def show_cursor!(*args); write show_cursor(*args); end
 
