@@ -67,4 +67,9 @@ describe Search do
     world.done?.should == false
     world.done.done?.should == true
   end
+
+  it "handles not matching" do
+    lambda { world.append_search_string("a").selected_choice }
+      .should raise_error(SystemExit)
+  end
 end
