@@ -23,7 +23,9 @@ describe Search do
       world.down.down.down.selected_choice.should == "two"
     end
 
-    it "moves down the filtered search results"
+    it "moves down the filtered search results" do
+      world.append_search_string("t").down.selected_choice.should == "three"
+    end
   end
 
   it "move up the list" do
