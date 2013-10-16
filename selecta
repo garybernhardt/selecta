@@ -23,8 +23,7 @@ KEY_CTRL_C = ?\C-c
 KEY_CTRL_N = ?\C-n
 KEY_CTRL_P = ?\C-p
 KEY_CTRL_W = ?\C-w
-# I don't know how to get this key code other than by hard-coding the ordinal
-KEY_DELETE = 127.chr
+KEY_DELETE = 127.chr # Equivalent to ?\C-?
 
 class Selecta
   def main
