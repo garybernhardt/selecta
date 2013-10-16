@@ -138,6 +138,7 @@ class Search
   end
 
   def selected_choice
+    raise SystemExit if matches.empty?
     matches.fetch(@index)
   end
 
