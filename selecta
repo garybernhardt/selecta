@@ -10,13 +10,14 @@
 # If this seems confusing, don't worry. You can treat it as a normal Ruby file
 # starting with the "!ruby" shebang below.
 
-exec /usr/bin/env ruby --disable-gems -x "$0"
+exec /usr/bin/env ruby --disable-gems -x "$0" $*
 #!ruby
 
 if RUBY_VERSION < '1.9.3'
   abort "error: Selecta requires Ruby 1.9.3 or higher."
 end
 
+require "optparse"
 require "io/console"
 
 KEY_CTRL_C = ?\C-c
@@ -27,7 +28,7 @@ KEY_DELETE = 127.chr # Equivalent to ?\C-?
 
 class Selecta
   def main
-    config = Configuration.from_inputs($stdin.readlines)
+    config = Configuration.from_inputs($stdin.readlines, ARGV)
     search = Search.blank(config)
 
     search = run_in_screen(config, search)
@@ -79,16 +80,45 @@ class Selecta
   end
 end
 
-class Configuration < Struct.new(:visible_choices, :choices)
-  def initialize(visible_choices, choices)
+class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
+  def initialize(visible_choices, initialize, choices)
     # Constructor is defined to force argument presence; otherwise Struct
     # defaults missing arguments to nil
     super
   end
 
-  def self.from_inputs(choices)
+  def self.from_inputs(choices, argv)
     choices = massage_choices(choices)
-    Configuration.new(20, choices)
+    options = parse_options(argv)
+    Configuration.new(20, options.fetch(:search), choices)
+  end
+
+  def self.parse_options(argv)
+    options = {}
+
+    parser = OptionParser.new do |opts|
+      opts.banner = "Usage: #{$PROGRAM_NAME} [options]"
+
+      opts.on("-h", "--help", "Show this message") do |v|
+        puts opts
+        exit
+      end
+
+      options[:search] = ""
+      opts.on("-s", "--search SEARCH", "Specify an initial search string") do |search|
+        options[:search] = search
+      end
+    end
+
+    begin
+      parser.parse!(argv)
+    rescue OptionParser::InvalidOption => e
+      $stderr.puts e
+      $stderr.puts parser
+      exit 1
+    end
+
+    options
   end
 
   def self.massage_choices(choices)
@@ -124,7 +154,7 @@ class Search
     new(:config => config,
         :choices => config.choices,
         :index => 0,
-        :query => "",
+        :query => config.initial_search,
         :done => false)
   end
 

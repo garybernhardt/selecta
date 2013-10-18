@@ -4,7 +4,7 @@ require_relative "spec_helper"
 describe Configuration do
   describe "choices" do
     it "removes leading and trailing whitespace" do
-      config = Configuration.from_inputs([" a choice "])
+      config = Configuration.from_inputs([" a choice "], [])
       config.choices.should == ["a choice"]
     end
 
@@ -20,8 +20,22 @@ describe Configuration do
 
       # We should silently fix the error
       expect do
-        Configuration.from_inputs([invalid_string])
+        Configuration.from_inputs([invalid_string], [])
       end.not_to raise_error
+    end
+  end
+
+  describe "command line options" do
+    describe "search queries" do
+      it "can be specified" do
+        config = Configuration.from_inputs([], ["-s", "some search"])
+        config.initial_search.should == "some search"
+      end
+
+      it "defaults to the empty string" do
+        config = Configuration.from_inputs([], [])
+        config.initial_search.should == ""
+      end
     end
   end
 end
