@@ -60,9 +60,9 @@ now, you can just stick this in your .vimrc:
 ```vimscript
 " Run a given vim command on the results of fuzzy selecting from a given shell
 " command. See usage below.
-function! SelectaCommand(choice_command, vim_command)
+function! SelectaCommand(choice_command, selecta_args, vim_command)
   try
-    silent! exec a:vim_command . " " . system(a:choice_command . " | selecta")
+    silent! exec a:vim_command . " " . system(a:choice_command . " | selecta " . a:selecta_args)
   catch /Vim:Interrupt/
     " Swallow the ^C so that the redraw below happens; otherwise there will be
     " leftovers from selecta on the screen
@@ -72,7 +72,7 @@ endfunction
 
 " Find all files in all non-dot directories starting in the working directory.
 " Fuzzy select one of those. Open the selected file with :e.
-map <leader>f :call SelectaCommand("find * -type f", ":e")<cr>
+nnoremap <leader>f :call SelectaCommand("find * -type f", "", ":e")<cr>
 ```
 
 ## Examples
@@ -94,29 +94,22 @@ When you say `git branch`, you get something like this:
 The `cut` removes those first two columns. Then we just select a branch and use
 it as an argument to `git checkout`.
 
-### Open tags in Vim
+### Search for files based on identifier under the cursor in Vim
 
-Suppose you use ctags, and want to fuzzy-select from them. This shell command
-will give you a list of tags:
-
-```shell
-awk '{print $1}' tags | sort -u | grep -v '^!'
-```
-
-(The grep removes the tag file headers.)
-
-Now that we have a tag list, we can use the Vim function from earlier. The Vim
-command will be `:tag`, to jump to whichever tag we select. The shell command
-above will generate the options. Putting those together:
+When you put your cursor anywhere in the word "User" and press `<c-g>`, this
+mapping will open Selecta with the search box pre-populated with "User". It's
+an quick and dirty way to find files related to an identifier.
 
 ```vimscript
-" Find all tags in the tags database, then open the tag that the user selects
-command! SelectaTag :call SelectaCommand("awk '{print $1}' tags | sort -u | grep -v '^!'", ":tag")
-map <leader>t :SelectaTag<cr>
+function! SelectaIdentifier()
+  " Yank the word under the cursor into the z register
+  normal "zyiw
+  " Fuzzy match files in the current directory, starting with the word under
+  " the cursor
+  call SelectaCommand("find * -type f", "-s " . @z, ":e")
+endfunction
+nnoremap <c-g> :call SelectaIdentifier()<cr>
 ```
-
-Now, when you hit `<leader>t`, it will prompt you to fuzzy-select a
-function/class/whatever, then will jump to the definition of that object.
 
 ## FAQ
 
