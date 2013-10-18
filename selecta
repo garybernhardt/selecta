@@ -28,7 +28,10 @@ KEY_DELETE = 127.chr # Equivalent to ?\C-?
 
 class Selecta
   def main
-    config = Configuration.from_inputs($stdin.readlines, ARGV)
+    # We have to parse options before trying to read the input in case the user
+    # did '-h', an invalid option, etc. and we need to terminate.
+    options = Configuration.parse_options(ARGV)
+    config = Configuration.from_inputs($stdin.readlines, options)
     search = Search.blank(config)
 
     search = run_in_screen(config, search)
@@ -87,10 +90,13 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
     super
   end
 
-  def self.from_inputs(choices, argv)
+  def self.from_inputs(choices, options)
     choices = massage_choices(choices)
-    options = parse_options(argv)
     Configuration.new(20, options.fetch(:search), choices)
+  end
+
+  def self.default_options
+    parse_options([])
   end
 
   def self.parse_options(argv)
