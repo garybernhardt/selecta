@@ -1,7 +1,8 @@
 require_relative "spec_helper"
 
 describe Search do
-  let(:config) { Configuration.from_inputs(["one", "two", "three"]) }
+  let(:config) { Configuration.from_inputs(["one", "two", "three"],
+                                           Configuration.default_options) }
   let(:world) { Search.blank(config) }
 
   it "selects the first choice by default" do
@@ -18,7 +19,7 @@ describe Search do
     end
 
     it "won't move past the visible choice limit" do
-      config = Configuration.new(2, ["one", "two", "three"])
+      config = Configuration.new(2, "", ["one", "two", "three"])
       world = Search.blank(config)
       world.down.down.down.selected_choice.should == "two"
     end
@@ -59,7 +60,8 @@ describe Search do
     end
 
     it "matches punctuation" do
-      config = Configuration.from_inputs(["/! symbols $^"])
+      config = Configuration.from_inputs(["/! symbols $^"],
+                                         Configuration.default_options)
       world = Search.blank(config)
       world.append_search_string("/!$^").matches.should == ["/! symbols $^"]
     end
