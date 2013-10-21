@@ -66,9 +66,11 @@ function! SelectaCommand(choice_command, selecta_args, vim_command)
   catch /Vim:Interrupt/
     " Swallow the ^C so that the redraw below happens; otherwise there will be
     " leftovers from selecta on the screen
+    redraw!
+    return
   endtry
-  exec a:vim_command . " " . selection
   redraw!
+  exec a:vim_command . " " . selection
 endfunction
 
 " Find all files in all non-dot directories starting in the working directory.
