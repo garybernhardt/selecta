@@ -48,7 +48,7 @@ class Selecta
     Screen.with_screen do |screen, tty|
       # We emit the number of lines we'll use later so we don't clobber whatever
       # was already on the screen.
-      (config.visible_choices).times { tty.puts }
+      config.visible_choices.times { tty.puts }
       begin
         ui_event_loop(search, screen, tty)
       ensure
