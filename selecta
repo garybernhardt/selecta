@@ -340,7 +340,6 @@ class Screen
   end
 
   def write_text_object(line, column, text)
-    highlight = false
     text.components.each do |component|
       if component.is_a? String
         ansi.setpos!(line, column)
@@ -355,8 +354,6 @@ class Screen
         component = component[0..chars_to_draw]
         ansi.addstr!(component)
         column += component.length
-      elsif component == :highlight
-        highlight = true
       elsif component == :inverse
         ansi.inverse!
       elsif component == :reset
