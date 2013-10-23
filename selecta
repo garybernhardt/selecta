@@ -24,11 +24,6 @@ KEY_CTRL_C = ?\C-c
 KEY_CTRL_N = ?\C-n
 KEY_CTRL_P = ?\C-p
 KEY_CTRL_W = ?\C-w
-ESC = 27.chr
-KEY_UP = ESC + "[A"
-KEY_DOWN = ESC + "[B"
-KEY_LEFT = ESC + "[D"
-KEY_RIGHT = ESC + "[C"
 KEY_DELETE = 127.chr # Equivalent to ?\C-?
 
 class Selecta
@@ -73,9 +68,7 @@ class Selecta
     case key
 
     when KEY_CTRL_N then search.down
-    when KEY_DOWN then search.down
     when KEY_CTRL_P then search.up
-    when KEY_UP then search.up
 
     when KEY_CTRL_W then search.delete_word
     when KEY_DELETE then search.backspace
@@ -393,6 +386,8 @@ class Text
 end
 
 class ANSI
+  ESC = 27.chr
+
   attr_reader :file
 
   def initialize(file)
@@ -484,19 +479,7 @@ class TTY < Struct.new(:in_file, :out_file)
   end
 
   def get_char
-    char = in_file.getc
-    sequence = char
-    is_ansi_escape_code = char == ESC
-    if is_ansi_escape_code
-      char = in_file.getc
-      sequence += char
-      if char == '['
-        char = in_file.getc
-        sequence += char
-      end
-    end
-
-    sequence
+    in_file.getc
   end
 
   def puts
