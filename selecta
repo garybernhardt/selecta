@@ -201,9 +201,15 @@ class Search
   end
 
   def matches
-    re = query.split(//).map(&Regexp.method(:escape)).join('.*')
-    re = /#{re}/i
-    @choices.select { |s| s =~ re }
+    @choices.map do |choice|
+      [choice, Score.score(choice, query)]
+    end.select do |choice, score|
+      score > 0.0
+    end.sort_by do |choice, score|
+      -score
+    end.map do |choice, score|
+      choice
+    end
   end
 
   def done

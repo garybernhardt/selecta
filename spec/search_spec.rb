@@ -50,20 +50,19 @@ describe Search do
   end
 
   describe "matching" do
-    it "is fuzzy" do
-      world.append_search_string("e").matches.should == ["one", "three"]
-      world.append_search_string("oe").matches.should == ["one"]
-    end
-
-    it "is case insensitive" do
-      world.append_search_string("OE").matches.should == ["one"]
-    end
-
-    it "matches punctuation" do
-      config = Configuration.from_inputs(["/! symbols $^"],
+    it "only returns matching choices" do
+      config = Configuration.from_inputs(["a", "b"],
                                          Configuration.default_options)
       world = Search.blank(config)
-      world.append_search_string("/!$^").matches.should == ["/! symbols $^"]
+      world.append_search_string("a").matches.should == ["a"]
+    end
+
+    it "sorts the choices by score" do
+      config = Configuration.from_inputs(["spec/search_spec.rb", "search.rb"],
+                                         Configuration.default_options)
+      world = Search.blank(config)
+      world.append_search_string("search").matches.should == ["search.rb",
+                                                              "spec/search_spec.rb"]
     end
   end
 
