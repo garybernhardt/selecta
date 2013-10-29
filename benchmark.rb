@@ -1,6 +1,7 @@
 require_relative "spec/spec_helper"
 
 def main
+  puts "Benchmark runtimes (lower is always better):"
   puts "non-matching: %s" % benchmark(["x" * 16] * 1000, "y" * 16)
   puts "matching exactly: %s" % benchmark(["x" * 16] * 1000, "x" * 16)
   puts "matching broken up: %s" % benchmark(["xy" * 16] * 1000, "x" * 16)
