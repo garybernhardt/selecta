@@ -229,7 +229,7 @@ class Score
       match_length = compute_match_length(choice, query.each_char.to_a)
       return 0.0 unless match_length
 
-      # The score goes down if there are extra characters in the choice.
+      # Penalize longer matches.
       score = query.length.to_f / match_length.to_f
 
       # Normalize vs. the length of the choice, penalizing longer strings.
