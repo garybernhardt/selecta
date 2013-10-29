@@ -269,7 +269,7 @@ class Score
     def find_end_of_match(string, chars, first_index)
       last_index = first_index
       chars.each do |this_char|
-        index = string.index(this_char, last_index)
+        index = string.index(this_char, last_index + 1)
         return nil unless index
         last_index = index
       end

@@ -75,6 +75,10 @@ describe "score" do
     score("A", "a").should == 1.0
   end
 
+  it "doesn't match when the same letter is repeated in the choice" do
+    score("a", "aa").should == 0.0
+  end
+
   xit "prefers acronyms to normal matches" do
     score("Foo Bar", "fb").should be > score("foo bar", "fb")
   end
