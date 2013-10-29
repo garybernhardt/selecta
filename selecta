@@ -201,13 +201,80 @@ class Search
   end
 
   def matches
-    re = query.split(//).map(&Regexp.method(:escape)).join('.*')
-    re = /#{re}/i
-    @choices.select { |s| s =~ re }
+    @choices.map do |choice|
+      [choice, Score.score(choice, query)]
+    end.select do |choice, score|
+      score > 0.0
+    end.sort_by do |choice, score|
+      -score
+    end.map do |choice, score|
+      choice
+    end
   end
 
   def done
     merge(:done => true)
+  end
+end
+
+class Score
+  class << self
+    def score(choice, query)
+      return 1.0 if query.length == 0
+      return 0.0 if choice.length == 0
+
+      choice = choice.downcase
+      query = query.downcase
+
+      match_length = compute_match_length(choice, query.each_char.to_a)
+      return 0.0 unless match_length
+
+      # The score goes down if there are extra characters in the choice.
+      score = query.length.to_f / match_length.to_f
+
+      # Normalize vs. the length of the choice, penalizing longer strings.
+      score / choice.length
+    end
+
+    # Find the length of the shortest substring matching the given characters.
+    def compute_match_length(string, chars)
+      first_char, *rest = chars
+      first_indexes = find_char_in_string(string, first_char)
+
+      first_indexes.map do |first_index|
+        last_index = find_end_of_match(string, rest, first_index)
+        if last_index
+          last_index - first_index + 1
+        else
+          nil
+        end
+      end.compact.min
+    end
+
+    # Find all occurrences of the character in the string, returning their indexes.
+    def find_char_in_string(string, char)
+      index = 0
+      indexes = []
+      while index
+        index = string.index(char, index)
+        if index
+          indexes << index
+          index += 1
+        end
+      end
+      indexes
+    end
+
+    # Find each of the characters in the string, moving strictly left to right.
+    def find_end_of_match(string, chars, first_index)
+      last_index = first_index
+      chars.each do |this_char|
+        index = string.index(this_char, last_index + 1)
+        return nil unless index
+        last_index = index
+      end
+      last_index
+    end
   end
 end
 
