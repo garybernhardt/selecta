@@ -20,10 +20,10 @@ describe Configuration do
       end.to raise_error(ArgumentError, /invalid byte sequence in UTF-8/)
 
       # We should silently fix the error
-      expect do
-        Configuration.from_inputs([invalid_string],
-                                  Configuration.default_options)
-      end.not_to raise_error
+      config = Configuration.from_inputs([invalid_string],
+                                         Configuration.default_options)
+      config.choices.should == [""]
+      config.choices.should_not == [invalid_string]
     end
   end
 
