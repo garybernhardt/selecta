@@ -10,7 +10,7 @@ describe "score" do
       score("", "a").should == 0
     end
 
-    it "scores 0 when the query is empty" do
+    it "scores 1 when the query is empty" do
       score("a", "").should == 1
     end
 
