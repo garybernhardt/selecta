@@ -1,2 +1,4 @@
 .DS_Store
 /tmp
+/.ruby-version
+/.ruby-gemset
