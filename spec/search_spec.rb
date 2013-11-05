@@ -33,11 +33,17 @@ describe Search do
     search.down.up.selected_choice.should == "one"
   end
 
-  it "backspaces over characters" do
-    search = self.search.append_search_string("e")
-    search.query.should == "e"
-    search = search.backspace
-    search.query.should == ""
+  describe "backspacing" do
+    let(:search) { Search.blank(config).append_search_string("e") }
+
+    it "backspaces over characters" do
+      search.query.should == "e"
+      search.backspace.query.should == ""
+    end
+
+    it "resets the index" do
+      search.backspace.index.should == 0
+    end
   end
 
   it "deletes words" do
