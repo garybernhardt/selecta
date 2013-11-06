@@ -202,7 +202,7 @@ class Search
 
   def matches
     @choices.map do |choice|
-      [choice, Score.score(choice, query)]
+      [choice, Respecta.new(choice).score(query)]
     end.select do |choice, score|
       score > 0.0
     end.sort_by do |choice, score|
@@ -217,66 +217,133 @@ class Search
   end
 end
 
-class Score
-  class << self
-    def score(choice, query)
-      return 1.0 if query.length == 0
-      return 0.0 if choice.length == 0
 
-      choice = choice.downcase
-      query = query.downcase
+class Respecta
+  attr_reader :haystack
 
-      match_length = compute_match_length(choice, query.each_char.to_a)
-      return 0.0 unless match_length
+  # text - the text to be searched
+  def initialize(text)
+    @haystack = Haystack.new text
+  end
 
-      # Penalize longer matches.
-      score = query.length.to_f / match_length.to_f
+  # Returns a score between 0 (no match) and 1 (perfect match) for how well
+  # `abbreviation` matches `text`.
+  def score(abbreviation)
+    return 1 if haystack.text == abbreviation || abbreviation.nil? || abbreviation.empty?
+    return 0 if abbreviation.length > haystack.text.length
 
-      # Normalize vs. the length of the choice, penalizing longer strings.
-      score / choice.length
-    end
+    # Find all possible locations where abbreviation matches the haystack text.
+    matches = match_locations haystack.text, abbreviation
+    # Score each match and return maximum.
+    matches.map { |m| haystack.score m }.max || 0
+  end
 
-    # Find the length of the shortest substring matching the given characters.
-    def compute_match_length(string, chars)
-      first_char, *rest = chars
-      first_indexes = find_char_in_string(string, first_char)
+  private
 
-      first_indexes.map do |first_index|
-        last_index = find_end_of_match(string, rest, first_index)
-        if last_index
-          last_index - first_index + 1
-        else
-          nil
-        end
-      end.compact.min
-    end
+  # Returns all the locations in `haystack` where the `needle` matches.
+  #
+  # Examples:
+  #
+  #     match_locations('hello world', 'l')   -> [ [2], [3], [9] ]
+  #     match_locations('hello world', 'lo')  -> [ [2,4], [2,7], [3,4], [3,7] ]
+  #     match_locations('hello world', 'lod') -> [ [2,4,10], [2,7,10], [3,4,10], [3,7,10] ]
+  #     match_locations('hello world', 'z')   -> [ [] ]
+  #
+  # This is the only non-trivial part of Respecta ;)
+  #
+  # This can be achieved in a number of ways and is potentially a hotspot.
+  # The implementation below is the fastest I know of:
+  #
+  # - http://lists.lrug.org/pipermail/chat-lrug.org/2013-October/009583.html
+  def match_locations(haystack, needles)
+    indices = Hash[haystack.
+                   each_char.
+                   with_index.
+                   group_by { |(char, _)| char }.
+                   map { |(char, values)| [char, values.map { |(_, index)| index }] }]
 
-    # Find all occurrences of the character in the string, returning their indexes.
-    def find_char_in_string(string, char)
-      index = 0
-      indexes = []
-      while index
-        index = string.index(char, index)
-        if index
-          indexes << index
-          index += 1
-        end
+    return [[]] unless indices[needles[0]]
+    results = indices[needles[0]].map { |i| [i] }
+    needles[1..-1].each_char do |char|
+      results = results.flat_map do |r|
+        return [[]] unless indices[char]
+        indices[char].drop_while { |i| i < r.last }.map { |i| r + [i] }
       end
-      indexes
     end
 
-    # Find each of the characters in the string, moving strictly left to right.
-    def find_end_of_match(string, chars, first_index)
-      last_index = first_index
-      chars.each do |this_char|
-        index = string.index(this_char, last_index + 1)
-        return nil unless index
-        last_index = index
-      end
-      last_index
-    end
+    results
   end
 end
+
+class Haystack
+  DEFAULT_LETTER_SCORE    = 1
+  START_OF_WORD_BONUS     = 1
+  CONTIGUOUS_LETTER_BONUS = 1
+
+  attr_reader :text
+
+  # text - the string to be searched.
+  def initialize(text)
+    @text = text
+  end
+
+  # Returns the quality of the match as a score between 0 (no match)
+  # and 1 (perfect match).
+  #
+  # indexes - the locations of the letters in `text` which are matched.
+  def score(indexes)
+    absolute_score(indexes).to_f / maximum_score
+  end
+
+  private
+
+  # Returns the quality of the match as an integer score.
+  #
+  # indexes - the locations of the letters in `text` which are matched.
+  def absolute_score(indexes)
+    total_individual_score = indexes.reduce(0) { |sum, index| sum + individual_letter_scores[index] }
+    total_contiguous_score = contiguous_letters_score indexes
+    total_individual_score + total_contiguous_score
+  end
+
+  # Returns the score you get when the search string matches the `text`.
+  def maximum_score
+    max_score_from_individual_letters = individual_letter_scores.reduce(:+)
+    max_score_from_contiguous_letters = text.length - 1
+    max_score_from_individual_letters + max_score_from_contiguous_letters
+  end
+
+  # Returns an array where each element is the score of the corresponding
+  # character in `text`.
+  def individual_letter_scores
+    @scores ||= begin
+      # every letter starts with a default score
+      scores = Array.new text.length, DEFAULT_LETTER_SCORE
+
+      # first letter of each "word" gets a bonus
+      text.chars.each_with_index do |c, i|
+        if i == 0 || text[i - 1] =~ /[^a-zA-Z0-9]/ || c =~ /[A-Z]/
+          scores[i] += START_OF_WORD_BONUS
+        end
+      end
+
+      scores
+    end
+  end
+
+  # Returns an integer count of the number of contiguous values in `indexes`.
+  # The initial value in a run of contiguous values is not tallied.
+  #
+  # Example: [ 1, 5, 6, 9, 11, 12, 13 ] -> 3
+  def contiguous_letters_score(indexes)
+    indexes.drop(1).each_with_index.reduce(0) do |sum, (value, i)|
+      sum += CONTIGUOUS_LETTER_BONUS if value == indexes[i] + 1
+      sum
+    end
+  end
+
+end
+
 
 class Renderer < Struct.new(:search, :screen)
   def self.render!(search, screen)

@@ -50,6 +50,8 @@ Ranking algorithm:
   of "crate" that matches).
 - Shorter overall strings match higher ("foo.rb" ranks higher than
   "foo_spec.rb").
+- Prefer letters at the start of "words"
+- Prefer contiguous to isolated letters
 
 ## Installation
 
