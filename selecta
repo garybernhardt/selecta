@@ -224,11 +224,31 @@ class Score
       return 1.0 if query.length == 0
       return 0.0 if choice.length == 0
 
-      choice = choice.downcase
-      query = query.downcase
-
-      match_length = compute_match_length(choice, query.each_char.to_a)
+      match_length = compute_match_length(choice.downcase, query.downcase.each_char.to_a)
       return 0.0 unless match_length
+
+      if query =~ /[A-Z]/
+        choice_tokens = choice.
+          gsub(/([A-Z])/, '_\1'). # camel/pascal case to splittable token
+          downcase.
+          split(%r{[/\\_ ]}). # tokenize
+          reject(&:empty?)
+
+        query_tokens = query.
+          gsub(/([A-Z])/, '_\1').
+          downcase.
+          split(%r{[/\\_ ]}).
+          reject(&:empty?)
+
+        query_tokens.each do |query_token|
+          begin
+            return 0.0 if choice_tokens.empty?
+
+            choice_token = choice_tokens.shift
+          end while !(choice_token.start_with?(query_token[0]) &&
+                      compute_match_length(choice.downcase, query_token.each_char.to_a))
+        end
+      end
 
       # Penalize longer matches.
       score = query.length.to_f / match_length.to_f

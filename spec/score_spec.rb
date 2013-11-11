@@ -48,7 +48,6 @@ describe "score" do
     end
 
     it "is case insensitive" do
-      score("a", "A").should == 1.0
       score("A", "a").should == 1.0
     end
 
@@ -85,5 +84,39 @@ describe "score" do
 
   xit "prefers acronyms to normal matches" do
     score("Foo Bar", "fb").should be > score("foo bar", "fb")
+  end
+
+  describe "uppercase search -> boundary matches" do
+    it "matches word boundaries" do
+      score("foo bar", "FB").should > 0.0
+      score("foobar", "FB").should == 0.0
+    end
+
+    it "matches snake cased words" do
+      score("foo_bar", "FB").should > 0.0
+      score("foobar", "FB").should == 0.0
+    end
+
+    it "matches pascal cased words" do
+      score("FooBar", "FB").should > 0.0
+      score("Foobar", "FB").should == 0.0
+    end
+
+    it "matches camel cased words" do
+      score("fooBar", "FB").should > 0.0
+      score("foobar", "FB").should == 0.0
+    end
+
+    it "matches path parts" do
+      score("foo/bar", "FB").should > 0.0
+      score("foo/rab", "FB").should == 0.0
+    end
+
+    it "combined upper and lower cased query" do
+      score("foo/bar", "FooB").should > 0.0
+      score("foo/rab", "FooB").should == 0.0
+      score("foo/rab", "Foob").should > 0.0
+      score("foo_bar", "FBr").should > 0.0
+    end
   end
 end
