@@ -400,6 +400,10 @@ class Screen
   end
 
   def write_text_object(line, column, text)
+    # Blank the line before drawing to it
+    ansi.setpos!(line, 0)
+    ansi.addstr!(" " * width)
+
     text.components.each do |component|
       if component.is_a? String
         ansi.setpos!(line, column)
@@ -424,8 +428,6 @@ class Screen
         ansi.color!(fg, bg)
       end
     end
-    remaining_cols = [width - column, 0].max
-    ansi.addstr!(" " * remaining_cols)
   end
 end
 
