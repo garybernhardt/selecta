@@ -197,7 +197,8 @@ class Search
   end
 
   def delete_word
-    merge(:query => @query.sub(/[^ ]* *$/, ""))
+    merge(:index => 0,
+          :query => @query.sub(/[^ ]* *$/, ""))
   end
 
   def matches
