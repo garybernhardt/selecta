@@ -304,7 +304,7 @@ class TokenMatch
     string.
       gsub(/([A-Z])/, '_\1'). # camel/pascal case to splittable token
       downcase.
-      split(%r{[/\\_ ]}). # tokenize
+      split(%r{[/\\_\. ]}). # tokenize
       reject(&:empty?)
   end
 end
