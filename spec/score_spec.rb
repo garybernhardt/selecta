@@ -105,6 +105,7 @@ describe "score" do
     it "matches pascal cased words" do
       score("FooBar", "FB").should > 0.0
       score("Foobar", "FB").should == 0.0
+      score("FooSbar", "FB").should == 0.0
     end
 
     it "matches camel cased words" do

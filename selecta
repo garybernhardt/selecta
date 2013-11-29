@@ -282,31 +282,29 @@ end
 
 class TokenMatch
   def initialize(choice, query)
-    @choice = choice.downcase
-    @choice_chars = create_tokenizable_string(choice).each_char.to_a
+    @choice = create_tokenizable_string(choice)
     @query_tokens = tokenize(query)
-    @latest_char = ''
   end
 
   def matches?
     @query_tokens.each do |query_token|
-      return false if @choice_chars.empty?
+      return false if @choice.empty?
 
       # Find the next token separator followed
       # by the first query token char
-      next_char('_', query_token[0])
+      next_substring("_#{query_token[0]}")
 
       # Find all the remaining chars in the
       # query token
       query_token.chars.drop(1).each do |char|
-        next_char(char)
+        next_substring(char)
       end
     end
 
     # If we haven't exhausted the `choice` and
     # all query tokens have been processed
     # we're fine
-    !!@latest_char
+    !@choice.empty?
   end
 
   def tokenize(string)
@@ -315,23 +313,20 @@ class TokenMatch
       reject(&:empty?)
   end
 
-  # Advances to the next `first_char` in the
-  # choice string. Advances to the `second_char` if given,
-  # after the `first_char` has been found.
-  def next_char(first_char, second_char = nil)
-    # We need to swap the first with
-    # the second char (because recursion)
-    if second_char
-      first_char, second_char = second_char, first_char
+  # Advances to the next `substring` in the
+  # choice string. If the `substring` is more
+  # than 1 char we advance to the end of the
+  # match.
+  def next_substring(substring)
+    return if @choice.empty?
+
+    index = @choice.index(substring)
+    if index
+      # advance if substring is more than 1 char
+      @choice = @choice[(index + substring.length - 1)..-1]
+    else
+      @choice = ''
     end
-
-    while @latest_char && @latest_char != first_char
-      next_char(second_char) if second_char
-
-      @latest_char = @choice_chars.shift
-    end
-
-    @latest_char
   end
 
   def create_tokenizable_string(string)
