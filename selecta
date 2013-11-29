@@ -285,35 +285,53 @@ class TokenMatch
     @choice = choice.downcase
     @choice_chars = create_tokenizable_string(choice).each_char.to_a
     @query_tokens = tokenize(query)
+    @latest_char = ''
   end
 
   def matches?
-    char = ''
     @query_tokens.each do |query_token|
       return false if @choice_chars.empty?
 
-      while char && char != query_token[0]
-        while char && char != '_'
-          char = @choice_chars.shift
-        end
+      # Find the next token separator followed
+      # by the first query token char
+      next_char('_', query_token[0])
 
-        char = @choice_chars.shift
-      end
-
-      query_token.chars.drop(1).each do |query_token_char|
-        while char && char != query_token_char
-          char = @choice_chars.shift
-        end
+      # Find all the remaining chars in the
+      # query token
+      query_token.chars.drop(1).each do |char|
+        next_char(char)
       end
     end
 
-    !!char
+    # If we haven't exhausted the `choice` and
+    # all query tokens have been processed
+    # we're fine
+    !!@latest_char
   end
 
   def tokenize(string)
     create_tokenizable_string(string).
       split('_').
       reject(&:empty?)
+  end
+
+  # Advances to the next `first_char` in the
+  # choice string. Advances to the `second_char` if given,
+  # after the `first_char` has been found.
+  def next_char(first_char, second_char = nil)
+    # We need to swap the first with
+    # the second char (because recursion)
+    if second_char
+      first_char, second_char = second_char, first_char
+    end
+
+    while @latest_char && @latest_char != first_char
+      next_char(second_char) if second_char
+
+      @latest_char = @choice_chars.shift
+    end
+
+    @latest_char
   end
 
   def create_tokenizable_string(string)
