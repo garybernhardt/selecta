@@ -123,5 +123,11 @@ describe "score" do
       score("foo/rab", "Foob").should > 0.0
       score("foo_bar", "FBr").should > 0.0
     end
+
+    it "allows lowercase matches only between tokens" do
+      score("foo/rab", "Foob").should > 0.0
+      score("foo_bab", "FoaB").should == 0.0
+      score("foo_abab_B", "FoaB").should > 0.0
+    end
   end
 end

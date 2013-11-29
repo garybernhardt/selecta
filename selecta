@@ -283,29 +283,45 @@ end
 class TokenMatch
   def initialize(choice, query)
     @choice = choice.downcase
-    @choice_tokens = tokenize(choice)
+    @choice_chars = create_tokenizable_string(choice).each_char.to_a
     @query_tokens = tokenize(query)
   end
 
   def matches?
+    char = ''
     @query_tokens.each do |query_token|
-      begin
-        return false if @choice_tokens.empty?
+      return false if @choice_chars.empty?
 
-        choice_token = @choice_tokens.shift
-      end while !(choice_token.start_with?(query_token[0]) &&
-                  Score.compute_match_length(@choice, query_token.each_char.to_a))
+      while char && char != query_token[0]
+        while char && char != '_'
+          char = @choice_chars.shift
+        end
+
+        char = @choice_chars.shift
+      end
+
+      query_token.chars.drop(1).each do |query_token_char|
+        while char && char != query_token_char
+          char = @choice_chars.shift
+        end
+      end
     end
 
-    true
+    !!char
   end
 
   def tokenize(string)
-    string.
-      gsub(/([A-Z])/, '_\1'). # camel/pascal case to splittable token
-      downcase.
-      split(%r{[/\\_\. ]}). # tokenize
+    create_tokenizable_string(string).
+      split('_').
       reject(&:empty?)
+  end
+
+  def create_tokenizable_string(string)
+    tokenizable_string = string.
+      gsub(/([A-Z])/, '_\1').
+      gsub(%r{[/\\_\. ]}, '_').
+      downcase
+    "_#{tokenizable_string}"
   end
 end
 
