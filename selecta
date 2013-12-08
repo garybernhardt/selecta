@@ -332,7 +332,7 @@ class TokenMatch
   def create_tokenizable_string(string)
     tokenizable_string = string.
       gsub(/([A-Z])/, '_\1').
-      gsub(%r{[/\\_\. ]}, '_').
+      gsub(%r{[/\\_\-\. ]}, '_').
       downcase
     "_#{tokenizable_string}"
   end

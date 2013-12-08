@@ -102,6 +102,11 @@ describe "score" do
       score("foobar", "FB").should == 0.0
     end
 
+    it "matches dash separated words" do
+      score("foo-bar", "FB").should > 0.0
+      score("foobar", "FB").should == 0.0
+    end
+
     it "matches pascal cased words" do
       score("FooBar", "FB").should > 0.0
       score("Foobar", "FB").should == 0.0

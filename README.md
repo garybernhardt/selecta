@@ -52,7 +52,7 @@ Ranking algorithm:
   "foo_spec.rb").
 - Uppercase characters in the query must match a word boundary.
   Word boundaries are pascal and camel cased words
-  and the characters '/', '\', '_', '.' and whitespace.
+  and the characters '/', '\', '_', '-', '.' and whitespace.
   ("FooB" will match "foo/bar" and "fooBar" but not "foobar")
 
 ## Installation
