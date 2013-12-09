@@ -125,6 +125,19 @@ endfunction
 nnoremap <c-g> :call SelectaIdentifier()<cr>
 ```
 
+### Have a Ctrl-p like system to open files on vim from the ZSH CLI
+
+```zsh
+bindkey -s "^P" "vim \$\(find \* -type f | selecta\)\n"
+```
+
+Or, if you have the_silver_searcher installed, you can avoid looking into files you are
+ignoring on your `.gitignore`:
+
+```zsh
+bindkey -s "^P" "vim \$\(ag --nogroup --nocolor --column -l . 2>/dev/null | selecta\)\n"
+```
+
 ## FAQ
 
 **Won't this be slow?**
