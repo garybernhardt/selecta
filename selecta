@@ -282,8 +282,8 @@ end
 
 class TokenMatch
   def initialize(choice, query)
-    @choice = create_tokenizable_string(choice)
-    @query_tokens = tokenize(query)
+    @choice = tokenizable_string(choice)
+    @query_tokens = tokens(query)
   end
 
   def matches?
@@ -307,10 +307,19 @@ class TokenMatch
     !@choice.empty?
   end
 
-  def tokenize(string)
-    create_tokenizable_string(string).
+  def tokens(string)
+    tokenizable_string(string).
       split('_').
       reject(&:empty?)
+  end
+
+  def tokenizable_string(string)
+    tokenizable_string = string.
+      gsub(/([A-Z])/, '_\1').
+      gsub(%r{[/\\_\-\. ]}, '_').
+      downcase
+
+    "_#{tokenizable_string}"
   end
 
   # Advances to the next `substring` in the
@@ -321,20 +330,8 @@ class TokenMatch
     return if @choice.empty?
 
     index = @choice.index(substring)
-    if index
-      # advance if substring is more than 1 char
-      @choice = @choice[(index + substring.length - 1)..-1]
-    else
-      @choice = ''
-    end
-  end
-
-  def create_tokenizable_string(string)
-    tokenizable_string = string.
-      gsub(/([A-Z])/, '_\1').
-      gsub(%r{[/\\_\-\. ]}, '_').
-      downcase
-    "_#{tokenizable_string}"
+    # advance if substring is more than 1 char
+    @choice = index ? @choice[(index + substring.length - 1)..-1] : ''
   end
 end
 
