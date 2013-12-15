@@ -121,6 +121,9 @@ describe "score" do
     it "matches path parts" do
       score("foo/bar", "FB").should > 0.0
       score("foo/rab", "FB").should == 0.0
+
+      score("foo\\bar", "FB").should > 0.0
+      score("foo\\rab", "FB").should == 0.0
     end
 
     it "combined upper and lower cased query" do
