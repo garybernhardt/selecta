@@ -92,7 +92,7 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
     super
   end
 
-  def self.from_inputs(choices, options, screen_height)
+  def self.from_inputs(choices, options, screen_height=21)
     # Shrink the number of visible choices if the screen is too small
     visible_choices = [20, screen_height - 1].min
 
