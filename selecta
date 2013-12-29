@@ -28,30 +28,28 @@ KEY_DELETE = 127.chr # Equivalent to ?\C-?
 
 class Selecta
   def main
-    # We have to parse options before trying to read the input in case the user
-    # did '-h', an invalid option, etc. and we need to terminate.
+    # We have to parse options before setting up the screen or trying to read
+    # the input in case the user did '-h', an invalid option, etc. and we need
+    # to terminate.
     options = Configuration.parse_options(ARGV)
-    config = Configuration.from_inputs($stdin.readlines, options)
-    search = Search.blank(config)
 
-    search = run_in_screen(config, search)
-    puts search.selected_choice
-  end
-
-  # Initialize the screen (and tear it down properly when done).
-  def run_in_screen(config, search)
     Screen.with_screen do |screen, tty|
+      config = Configuration.from_inputs($stdin.readlines, options, screen.height)
+      search = Search.blank(config)
+
       # We emit the number of lines we'll use later so we don't clobber whatever
       # was already on the screen.
       config.visible_choices.times { tty.puts }
       begin
-        ui_event_loop(search, screen, tty)
+        search = ui_event_loop(search, screen, tty)
       ensure
         # Always move the cursor to the bottom so the next program doesn't draw
         # over whatever we left on the screen.
         screen.move_cursor(screen.height - 1, 0)
       end
     end
+
+    puts search.selected_choice
   end
 
   # Use the search and screen to process user actions until they quit.
@@ -90,9 +88,12 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
     super
   end
 
-  def self.from_inputs(choices, options)
+  def self.from_inputs(choices, options, screen_height)
+    # Shrink the number of visible choices if the screen is too small
+    visible_choices = [20, screen_height - 1].min
+
     choices = massage_choices(choices)
-    Configuration.new(20, options.fetch(:search), choices)
+    Configuration.new(visible_choices, options.fetch(:search), choices)
   end
 
   def self.default_options
