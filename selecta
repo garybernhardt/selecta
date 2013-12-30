@@ -33,7 +33,7 @@ class Selecta
     # to terminate.
     options = Configuration.parse_options(ARGV)
 
-    Screen.with_screen do |screen, tty|
+    search = Screen.with_screen do |screen, tty|
       config = Configuration.from_inputs($stdin.readlines, options, screen.height)
       run_in_screen(config, screen, tty)
     end
@@ -54,6 +54,7 @@ class Selecta
       # over whatever we left on the screen.
       screen.move_cursor(screen.height - 1, 0)
     end
+    search
   end
 
   # Use the search and screen to process user actions until they quit.
