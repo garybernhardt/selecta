@@ -77,6 +77,12 @@ describe Search do
     search.done.done?.should == true
   end
 
+  it "is done if there are no choices" do
+    config = Configuration.from_inputs([], Configuration.default_options)
+    search = Search.blank(config)
+    search.done?.should == true
+  end
+
   it "handles not matching" do
     lambda { search.append_search_string("a").selected_choice }
       .should raise_error(SystemExit)
