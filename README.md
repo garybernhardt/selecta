@@ -36,6 +36,7 @@ Selecta does not:
 It supports these keys:
 
 - ^W to delete the word before the cursor
+- ^H to delete the character before the cursor
 - ^N to select the next match
 - ^P to select the previous match
 - ^C to quit without selecting a match
