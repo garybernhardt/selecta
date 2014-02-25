@@ -66,7 +66,10 @@ a gem, it would sometimes disappear when you said `rvm use`.
 ## Use with Vim
 
 There's no actual vim plugin yet. It may not end up needing one; we'll see. For
-now, you can just stick this in your .vimrc:
+now, you can just stick the code below in your .vimrc to invoke Selecta with
+`<leader>f` (this will be `\f` unless you've changed your leader). Note that
+Selecta has to run in a terminal by its nature, so this Vim example will not
+work in graphical Vims like MacVim.
 
 ```vimscript
 " Run a given vim command on the results of fuzzy selecting from a given shell
