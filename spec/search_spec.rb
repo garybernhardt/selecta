@@ -55,6 +55,15 @@ describe Search do
     search.append_search_string(" a b").delete_word.query.should == " a "
   end
 
+  it "clears query" do
+    search.append_search_string("").clear_query.query.should == ""
+    search.append_search_string("a").clear_query.query.should == ""
+    search.append_search_string("a ").clear_query.query.should == ""
+    search.append_search_string("a b").clear_query.query.should == ""
+    search.append_search_string("a b ").clear_query.query.should == ""
+    search.append_search_string(" a b").clear_query.query.should == ""
+  end
+
   describe "matching" do
     it "only returns matching choices" do
       config = Configuration.from_inputs(["a", "b"],
