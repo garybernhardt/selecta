@@ -178,7 +178,7 @@ class Search
   end
 
   def done?
-    @done
+    config.choices.empty? || @done
   end
 
   def selected_choice
