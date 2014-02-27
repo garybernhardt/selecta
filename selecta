@@ -41,6 +41,9 @@ class Selecta
     end
 
     puts search.selected_choice
+  rescue ScreenValidator::NotATTY
+    $stderr.puts(
+      "Can't get a working TTY. Selecta requires an ANSI-compatible terminal.")
   end
 
   def run_in_screen(config, screen, tty)
@@ -330,6 +333,7 @@ class Screen
       screen = self.new(tty)
       screen.configure_tty
       begin
+        ScreenValidator.raise_unless_screen_is_valid(screen.height)
         yield screen, tty
       ensure
         screen.restore_tty
@@ -444,6 +448,14 @@ class Screen
       end
     end
   end
+end
+
+class ScreenValidator
+  def self.raise_unless_screen_is_valid(screen_height)
+    raise NotATTY if screen_height == 0
+  end
+
+  class NotATTY < RuntimeError; end
 end
 
 class Text
