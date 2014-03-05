@@ -19,6 +19,7 @@ end
 
 require "optparse"
 require "io/console"
+require "thread"
 
 KEY_CTRL_C = ?\C-c
 KEY_CTRL_N = ?\C-n
@@ -36,7 +37,7 @@ class Selecta
     options = Configuration.parse_options(ARGV)
 
     search = Screen.with_screen do |screen, tty|
-      config = Configuration.from_inputs($stdin.readlines, options, screen.height)
+      config = Configuration.from_inputs([], options, screen.height)
       run_in_screen(config, screen, tty)
     end
 
@@ -64,11 +65,59 @@ class Selecta
 
   # Use the search and screen to process user actions until they quit.
   def ui_event_loop(search, screen, tty)
-    while not search.done?
-      Renderer.render!(search, screen)
-      search = handle_key(search, tty.get_char)
+    incoming_choices = Queue.new
+    incoming_keystrokes = Queue.new
+    write_stdin_to_queue(incoming_choices)
+    write_keystrokes_to_queue(incoming_keystrokes, tty)
+    until search.done?
+      search, choices_changed = refresh_choice_list(incoming_choices, search)
+      search, keystroke_changed = handle_keystroke_if_available(incoming_keystrokes, search)
+      # Unnecessary rendering can cause flickering, so we only want to render
+      # if we have something new to tell the user.
+      if choices_changed or keystroke_changed
+        Renderer.render!(search, screen)
+      end
     end
     search
+  end
+
+  def write_stdin_to_queue(queue)
+    Thread.new do
+      $stdin.each do |line|
+        queue << line
+      end
+    end
+  end
+
+  def write_keystrokes_to_queue(queue, tty)
+    Thread.new do
+      while true
+        queue << tty.get_char
+      end
+    end
+  end
+
+  # If any new choices have come in through stdin, add them to the search.
+  def refresh_choice_list(queue, search)
+    new_choices = []
+    until queue.empty?
+      new_choices << queue.deq(non_block=true)
+    end
+    choices_changed = !new_choices.empty?
+    return search.append_new_choices(new_choices), choices_changed
+  end
+
+  # If the user has pressed a key recently, handle it.
+  def handle_keystroke_if_available(incoming_keystrokes, search)
+    if incoming_keystrokes.empty?
+      # Sleeping briefly here prevents our spinwait from utilizing the entire
+      # CPU core, which actually improves responsiveness.
+      sleep(0.01)
+      return search, false
+    else
+      search = handle_key(search, incoming_keystrokes.deq)
+      return search, true
+    end
   end
 
   # On each keystroke, generate a new search object
@@ -99,12 +148,12 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
     super
   end
 
-  def self.from_inputs(choices, options, screen_height=21)
+  def self.from_inputs(initial_choices, options, screen_height=21)
     # Shrink the number of visible choices if the screen is too small
     visible_choices = [20, screen_height - 1].min
 
-    choices = massage_choices(choices)
-    Configuration.new(visible_choices, options.fetch(:search), choices)
+    initial_choices = UnicodeMassager.massage_strings(initial_choices)
+    Configuration.new(visible_choices, options.fetch(:search), initial_choices)
   end
 
   def self.default_options
@@ -138,9 +187,11 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
 
     options
   end
+end
 
-  def self.massage_choices(choices)
-    choices.map do |choice|
+class UnicodeMassager
+  def self.massage_strings(strings)
+    strings.map do |str|
       # Encoding to UTF-8 with `:invalid => :replace` isn't good enough; it
       # still leaves some invalid characters. For example, this string will fail:
       #
@@ -150,7 +201,7 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
       # fixes this. I don't understand why. I found it via:
       #
       # http://stackoverflow.com/questions/2982677/ruby-1-9-invalid-byte-sequence-in-utf-8
-      utf16 = choice.encode('UTF-16', 'UTF-8', :invalid => :replace, :replace => '')
+      utf16 = str.encode('UTF-16', 'UTF-8', :invalid => :replace, :replace => '')
       utf16.encode('UTF-8', 'UTF-16')
     end.map(&:strip)
   end
@@ -232,6 +283,10 @@ class Search
 
   def done
     merge(:done => true)
+  end
+
+  def append_new_choices(c)
+    merge(:choices => @choices + UnicodeMassager.massage_strings(c))
   end
 end
 
