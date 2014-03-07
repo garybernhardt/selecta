@@ -19,6 +19,7 @@ end
 
 require "optparse"
 require "io/console"
+require "timeout"
 
 KEY_CTRL_C = ?\C-c
 KEY_CTRL_N = ?\C-n
@@ -27,6 +28,10 @@ KEY_CTRL_U = ?\C-u
 KEY_CTRL_H = ?\C-h
 KEY_CTRL_W = ?\C-w
 KEY_DELETE = 127.chr # Equivalent to ?\C-?
+KEY_RETURN = ?\r
+KEY_ESC = ?\e
+KEY_UP = KEY_ESC + "[A"
+KEY_DOWN = KEY_ESC + "[B"
 
 class Selecta
   def main
@@ -74,16 +79,15 @@ class Selecta
   # On each keystroke, generate a new search object
   def handle_key(search, key)
     case key
-
-    when KEY_CTRL_N then search.down
-    when KEY_CTRL_P then search.up
+    when KEY_CTRL_N, KEY_DOWN then search.down
+    when KEY_CTRL_P, KEY_UP then search.up
 
     when KEY_CTRL_U then search.clear_query
     when KEY_CTRL_W then search.delete_word
     when KEY_CTRL_H, KEY_DELETE then search.backspace
 
-    when ?\r then search.done
-    when KEY_CTRL_C then raise SystemExit
+    when KEY_RETURN then search.done
+    when KEY_CTRL_C, KEY_ESC then raise SystemExit
 
     when /[[:print:]]/ then search.append_search_string(key.chr)
 
@@ -350,7 +354,6 @@ class Screen
     @original_stty_state = tty.stty("-g")
   end
 
-
   def configure_tty
     # raw: Disable input and output processing
     # -echo: Don't echo keys back
@@ -572,7 +575,17 @@ class TTY < Struct.new(:in_file, :out_file)
   end
 
   def get_char
-    in_file.getc
+    char = in_file.getc
+    begin
+      Timeout.timeout(0.00001) {
+        loop do
+          char << in_file.getc
+        end
+      }
+    rescue Timeout::Error
+      # indicating end of character
+    end
+    char
   end
 
   def puts
