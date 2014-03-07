@@ -32,6 +32,8 @@ KEY_RETURN = ?\r
 KEY_ESC = ?\e
 KEY_UP = KEY_ESC + "[A"
 KEY_DOWN = KEY_ESC + "[B"
+KEY_UP_SPECIAL = KEY_ESC + "OA"
+KEY_DOWN_SPECIAL = KEY_ESC + "OB"
 
 class Selecta
   def main
@@ -79,8 +81,8 @@ class Selecta
   # On each keystroke, generate a new search object
   def handle_key(search, key)
     case key
-    when KEY_CTRL_N, KEY_DOWN then search.down
-    when KEY_CTRL_P, KEY_UP then search.up
+    when KEY_CTRL_N, KEY_DOWN, KEY_DOWN_SPECIAL then search.down
+    when KEY_CTRL_P, KEY_UP, KEY_UP_SPECIAL then search.up
 
     when KEY_CTRL_U then search.clear_query
     when KEY_CTRL_W then search.delete_word
@@ -577,11 +579,11 @@ class TTY < Struct.new(:in_file, :out_file)
   def get_char
     char = in_file.getc
     begin
-      Timeout.timeout(0.00001) {
+      Timeout.timeout(0.00001) do
         loop do
           char << in_file.getc
         end
-      }
+      end
     rescue Timeout::Error
       # indicating end of character
     end
