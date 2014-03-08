@@ -115,7 +115,9 @@ class Selecta
       sleep(0.01)
       return search, false
     else
-      search = handle_key(search, incoming_keystrokes.deq)
+      until incoming_keystrokes.empty?
+        search = handle_key(search, incoming_keystrokes.deq)
+      end
       return search, true
     end
   end
