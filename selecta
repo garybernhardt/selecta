@@ -359,19 +359,21 @@ class Renderer < Struct.new(:search, :screen)
     start_line = screen.height - search.config.visible_choices - 1
     screen.with_cursor_hidden do
       screen.write_lines(start_line, rendered.choices)
-      screen.move_cursor(start_line, rendered.search_line.length)
+      screen.move_cursor(start_line, rendered.cursor_pos)
     end
   end
 
   def render
-    search_line = "> " + search.query
+    choice_count = " (#{search.choices.size} choices)"
+    search_line = "> " + search.query + choice_count
+    cursor_pos = search_line.length - choice_count.length
     matches = search.matches
     unless matches.empty?
       matches[search.index] = Text[:inverse, matches.fetch(search.index), :reset]
     end
     matches = correct_match_count(matches)
     lines = [search_line] + matches
-    Rendered.new(lines, search_line)
+    Rendered.new(lines, search_line, cursor_pos)
   end
 
   def correct_match_count(matches)
@@ -380,7 +382,7 @@ class Renderer < Struct.new(:search, :screen)
     padded
   end
 
-  class Rendered < Struct.new(:choices, :search_line)
+  class Rendered < Struct.new(:choices, :search_line, :cursor_pos)
   end
 end
 
