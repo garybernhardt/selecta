@@ -611,7 +611,9 @@ end
 if $0 == __FILE__
   begin
     Selecta.new.main
-  rescue SystemExit, Interrupt
+  rescue Interrupt
     exit(1)
+  rescue SystemExit
+    exit(0)
   end
 end
