@@ -50,6 +50,10 @@ Ranking algorithm:
   of "crate" that matches).
 - Shorter overall strings match higher ("foo.rb" ranks higher than
   "foo_spec.rb").
+- Uppercase characters in the query must match a word boundary.
+  Word boundaries are pascal and camel cased words
+  and the characters '/', '\', '_', '-', '.' and whitespace.
+  ("FooB" will match "foo/bar" and "fooBar" but not "foobar")
 
 ## Installation
 

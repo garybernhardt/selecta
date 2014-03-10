@@ -248,11 +248,12 @@ class Score
       return 1.0 if query.length == 0
       return 0.0 if choice.length == 0
 
-      choice = choice.downcase
-      query = query.downcase
-
-      match_length = compute_match_length(choice, query.each_char.to_a)
+      match_length = compute_match_length(choice.downcase, query.downcase.each_char.to_a)
       return 0.0 unless match_length
+
+      if query =~ /[A-Z]/
+        return 0.0 unless TokenMatch.new(choice, query).matches?
+      end
 
       # Penalize longer matches.
       score = query.length.to_f / match_length.to_f
@@ -300,6 +301,61 @@ class Score
       end
       last_index
     end
+  end
+end
+
+class TokenMatch
+  def initialize(choice, query)
+    @choice = tokenizable_string(choice)
+    @query_tokens = tokens(query)
+  end
+
+  def matches?
+    @query_tokens.each do |query_token|
+      return false if @choice.empty?
+
+      # Find the next token separator followed
+      # by the first query token char
+      next_substring("_#{query_token[0]}")
+
+      # Find all the remaining chars in the
+      # query token
+      query_token.chars.drop(1).each do |char|
+        next_substring(char)
+      end
+    end
+
+    # If we haven't exhausted the `choice` and
+    # all query tokens have been processed
+    # we're fine
+    !@choice.empty?
+  end
+
+  def tokens(string)
+    tokenizable_string(string).
+      split('_').
+      reject(&:empty?)
+  end
+
+  def tokenizable_string(string)
+    tokenizable_string = string.
+      gsub(/([A-Z])/, '_\1').
+      gsub(%r{[/\\_\-\. ]}, '_').
+      downcase
+
+    "_#{tokenizable_string}"
+  end
+
+  # Advances to the next `substring` in the
+  # choice string. If the `substring` is more
+  # than 1 char we advance to the end of the
+  # match.
+  def next_substring(substring)
+    return if @choice.empty?
+
+    index = @choice.index(substring)
+    # advance if substring is more than 1 char
+    @choice = index ? @choice[(index + substring.length - 1)..-1] : ''
   end
 end
 
