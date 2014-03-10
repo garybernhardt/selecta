@@ -56,13 +56,19 @@ Ranking algorithm:
 
 Selecta requires Ruby 1.9 or better.
 
-For now, copy the `selecta` script to your path. ~/bin is a great place for it.
+Copy the `selecta` script to your path. ~/bin is a great place for it.
 If you don't currently have a ~/bin, just do `mkdir ~/bin` and add
 `export PATH="$HOME/bin:$PATH"` to your .zshrc, .bashrc, etc.
 
 Selecta is *not installable as a gem*! Gems are only good for
 application-specific tools. You want Selecta available at all times. If it were
 a gem, it would sometimes disappear when you said `rvm use`.
+
+### Homebrew
+
+Selecta can also be installed with homebrew:
+
+    brew install selecta
 
 ## Use with Vim
 
