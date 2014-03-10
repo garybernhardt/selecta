@@ -30,13 +30,12 @@ Selecta does not:
 - Know about any editors (including vim).
 - Know what it's searching.
 - Perform any actions on the item you select.
-- Change the order of the choices piped in. (But you can always put a `| sort
-  |` in your pipeline if you want them sorted.)
 
 It supports these keys:
 
 - ^W to delete the word before the cursor
 - ^H to delete the character before the cursor
+- ^U to delete the entire line
 - ^N to select the next match
 - ^P to select the previous match
 - ^C to quit without selecting a match
@@ -44,8 +43,8 @@ It supports these keys:
 Ranking algorithm:
 
 - Select each input string that contains all of the characters in the query.
-  They must be in order, but don't have to be sequential. ("ct" will match
-  "cat" and "crate".)
+  They must be in order, but don't have to be sequential. Case is ignored.
+  ("ct" will match "cat" and "Crate", but not "tack".)
 - Shorter match substrings rank higher (when searching for "ct", "cat" ranks
   higher than "crate" because "cat" is shorter than "crat", which is the part
   of "crate" that matches).
@@ -54,7 +53,7 @@ Ranking algorithm:
 
 ## Installation
 
-Selecta requires Ruby 1.9 or better.
+Selecta requires Ruby 1.9.3 or better.
 
 For now, copy the `selecta` script to your path. ~/bin is a great place for it.
 If you don't currently have a ~/bin, just do `mkdir ~/bin` and add
@@ -127,6 +126,18 @@ function! SelectaIdentifier()
   call SelectaCommand("find * -type f", "-s " . @z, ":e")
 endfunction
 nnoremap <c-g> :call SelectaIdentifier()<cr>
+```
+
+### Switch to a project
+
+You can use Selecta to write a simple shell function that will allow you to
+quickly switch to a particular project's directory. For example, supposing you
+have projects under both ~/rails-projects and ~/django-projects:
+
+```shell
+proj() {
+    cd $(find ~/rails-projects ~/django-projects -maxdepth 1 -type d | selecta)
+}
 ```
 
 ## FAQ
