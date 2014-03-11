@@ -57,9 +57,7 @@ The ranking algorithm is:
 
 - Select each input string that contains all of the characters in the query.
   They must be in order, but don't have to be sequential. Case is ignored.
-- Shorter matching substrings rank higher. When searching for "ct", "cat" ranks
-  higher than "crate" because "cat" is shorter than "crat", which is the part
-  of "crate" that matches.
+- Shorter matching substrings rank higher.
 
 Some concrete examples:
 - "ct" will match "cat" and "Crate", but not "tack".
