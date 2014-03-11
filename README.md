@@ -115,7 +115,7 @@ nnoremap <leader>f :call SelectaCommand("find * -type f", "", ":e")<cr>
 
 ## Usage Examples
 
-### Check out a git branch
+#### Check out a git branch
 
 ```
 $ git branch | cut -c 3- | selecta | xargs git checkout
@@ -132,7 +132,7 @@ When you say `git branch`, you get something like this:
 The `cut` removes those first two columns. Then we just select a branch and use
 it as an argument to `git checkout`.
 
-### Search for files based on identifier under the cursor in Vim
+#### Search for files based on identifier under the cursor in Vim
 
 When you put your cursor anywhere in the word "User" and press `<c-g>`, this
 mapping will open Selecta with the search box pre-populated with "User". It's
@@ -149,7 +149,7 @@ endfunction
 nnoremap <c-g> :call SelectaIdentifier()<cr>
 ```
 
-### Switch to a project
+#### Switch to a project
 
 You can use Selecta to write a simple shell function that will allow you to
 quickly switch to a particular project's directory. For example, supposing you
@@ -161,7 +161,7 @@ proj() {
 }
 ```
 
-### Insert fuzzy-found paths directly into the shell command line
+#### Insert fuzzy-found paths directly into the shell command line
 
 This only works with zsh (patches to make it work with Bash would be
 appreciated). Put it in your ~/.zshrc. Then, whenever you press ^S, zsh will
