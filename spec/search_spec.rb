@@ -90,4 +90,30 @@ describe Search do
     lambda { search.append_search_string("a").selected_choice }
       .should raise_error(SystemExit)
   end
+
+  describe "appending" do
+    it "allows new choices to be appended" do
+      new_search = search.append_new_choices(["four", "five"])
+      new_search.choices.size.should == 5
+    end
+
+    # This behavior has unfortunate performance implications due to Ruby's
+    # mutation-oriented standard library, but this invariant needs to be
+    # preserved nonetheless.
+    it "doesn't mutate the search object" do
+      new_search = search.append_new_choices(["four", "five"])
+      search.choices.size.should == 3
+    end
+
+    it "silences invalid UTF characters in incoming choices" do
+      path = File.expand_path(File.join(File.dirname(__FILE__),
+                                        "invalid_utf8.txt"))
+      invalid_string = File.read(path)
+
+      new_search = search.append_new_choices([invalid_string])
+
+      new_search.choices[-1].should == ""
+      new_search.choices[-1].should_not == invalid_string
+    end
+  end
 end

@@ -19,6 +19,7 @@ end
 
 require "optparse"
 require "io/console"
+require "io/wait"
 
 KEY_CTRL_C = ?\C-c
 KEY_CTRL_N = ?\C-n
@@ -38,7 +39,7 @@ class Selecta
     options = Configuration.parse_options(ARGV)
 
     search = Screen.with_screen do |screen, tty|
-      config = Configuration.from_inputs($stdin.readlines, options, screen.height)
+      config = Configuration.from_inputs([], options, screen.height)
       run_in_screen(config, screen, tty)
     end
 
@@ -66,11 +67,41 @@ class Selecta
 
   # Use the search and screen to process user actions until they quit.
   def ui_event_loop(search, screen, tty)
-    while not search.done?
+    watchlist = [tty.input, $stdin]
+    until search.done?
+      if $stdin.eof?
+        # select(2) will *always* return $stdin immediately once we hit EOF, so
+        # we need to stop checking it for activity
+        watchlist.delete($stdin)
+      end
+      active_channels = select(watchlist)
+      active_inputs = active_channels[0]
+      if active_inputs.include?(tty.input)
+        search = handle_keys(search, tty)
+      end
+      if active_inputs.include?($stdin)
+        search = incorporate_new_lines(search)
+      end
       Renderer.render!(search, screen)
+    end
+    search
+  end
+
+  # Handle all pending TTY input
+  def handle_keys(search, tty)
+    while tty.input.ready?
       search = handle_key(search, tty.get_char)
     end
     search
+  end
+
+  # Incorporate all new choices into the search
+  def incorporate_new_lines(search)
+    new_lines = []
+    while $stdin.ready?
+      new_lines << $stdin.readline
+    end
+    search.append_new_choices(new_lines)
   end
 
   # On each keystroke, generate a new search object
@@ -101,12 +132,12 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
     super
   end
 
-  def self.from_inputs(choices, options, screen_height=21)
+  def self.from_inputs(initial_choices, options, screen_height=21)
     # Shrink the number of visible choices if the screen is too small
     visible_choices = [20, screen_height - 1].min
 
-    choices = massage_choices(choices)
-    Configuration.new(visible_choices, options.fetch(:search), choices)
+    initial_choices = UnicodeMassager.massage_strings(initial_choices)
+    Configuration.new(visible_choices, options.fetch(:search), initial_choices)
   end
 
   def self.default_options
@@ -145,9 +176,11 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
 
     options
   end
+end
 
-  def self.massage_choices(choices)
-    choices.map do |choice|
+class UnicodeMassager
+  def self.massage_strings(strings)
+    strings.map do |str|
       # Encoding to UTF-8 with `:invalid => :replace` isn't good enough; it
       # still leaves some invalid characters. For example, this string will fail:
       #
@@ -157,7 +190,7 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
       # fixes this. I don't understand why. I found it via:
       #
       # http://stackoverflow.com/questions/2982677/ruby-1-9-invalid-byte-sequence-in-utf-8
-      utf16 = choice.encode('UTF-16', 'UTF-8', :invalid => :replace, :replace => '')
+      utf16 = str.encode('UTF-16', 'UTF-8', :invalid => :replace, :replace => '')
       utf16.encode('UTF-8', 'UTF-16')
     end.map(&:strip)
   end
@@ -240,6 +273,10 @@ class Search
   def done
     merge(:done => true)
   end
+
+  def append_new_choices(c)
+    merge(:choices => @choices + UnicodeMassager.massage_strings(c))
+  end
 end
 
 class Score
@@ -309,19 +346,21 @@ class Renderer < Struct.new(:search, :screen)
     start_line = screen.height - search.config.visible_choices - 1
     screen.with_cursor_hidden do
       screen.write_lines(start_line, rendered.choices)
-      screen.move_cursor(start_line, rendered.search_line.length)
+      screen.move_cursor(start_line, rendered.cursor_pos)
     end
   end
 
   def render
-    search_line = "> " + search.query
+    choice_count = " (#{search.choices.size} choices)"
+    search_line = "> " + search.query + choice_count
+    cursor_pos = search_line.length - choice_count.length
     matches = search.matches
     unless matches.empty?
       matches[search.index] = Text[:inverse, matches.fetch(search.index), :reset]
     end
     matches = correct_match_count(matches)
     lines = [search_line] + matches
-    Rendered.new(lines, search_line)
+    Rendered.new(lines, search_line, cursor_pos)
   end
 
   def correct_match_count(matches)
@@ -330,7 +369,7 @@ class Renderer < Struct.new(:search, :screen)
     padded
   end
 
-  class Rendered < Struct.new(:choices, :search_line)
+  class Rendered < Struct.new(:choices, :search_line, :cursor_pos)
   end
 end
 
@@ -356,7 +395,6 @@ class Screen
     @ansi = ANSI.new(tty.out_file)
     @original_stty_state = tty.stty("-g")
   end
-
 
   def configure_tty
     # raw: Disable input and output processing
@@ -592,6 +630,10 @@ class TTY < Struct.new(:in_file, :out_file)
 
   def stty(args)
     command("stty #{args}")
+  end
+
+  def input
+    in_file
   end
 
   private
