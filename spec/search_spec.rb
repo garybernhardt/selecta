@@ -33,6 +33,13 @@ describe Search do
     search.down.up.selected_choice.should == "one"
   end
 
+  context "when nothing matches" do
+    it "handles not matching" do
+      selection = search.append_search_string("doesnt-mtch").selected_choice
+      selection.should == Search::NoSelection
+    end
+  end
+
   describe "backspacing" do
     let(:search) { Search.blank(config).append_search_string("e") }
 
@@ -84,10 +91,5 @@ describe Search do
   it "knows when it's done" do
     search.done?.should == false
     search.done.done?.should == true
-  end
-
-  it "handles not matching" do
-    lambda { search.append_search_string("a").selected_choice }
-      .should raise_error(SystemExit)
   end
 end

@@ -42,7 +42,9 @@ class Selecta
       run_in_screen(config, screen, tty)
     end
 
-    puts search.selected_choice
+    unless search.selected_choice == Search::NoSelection
+      puts search.selected_choice
+    end
   rescue ScreenValidator::NotATTY
     $stderr.puts(
       "Can't get a working TTY. Selecta requires an ANSI-compatible terminal.")
@@ -192,8 +194,7 @@ class Search
   end
 
   def selected_choice
-    raise SystemExit if matches.empty?
-    matches.fetch(@index)
+    matches.fetch(@index) { NoSelection }
   end
 
   def down
@@ -240,6 +241,8 @@ class Search
   def done
     merge(:done => true)
   end
+
+  class NoSelection; end
 end
 
 class Score
