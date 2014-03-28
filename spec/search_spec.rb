@@ -7,36 +7,36 @@ describe Search do
 
   describe "the selected choice" do
     it "selects the first choice by default" do
-      search.selected_choice.should == "one"
+      search.selection.should == "one"
     end
 
     describe "moving down the list" do
       it "moves down the list" do
-        search.down.selected_choice.should == "two"
+        search.down.selection.should == "two"
       end
 
       it "won't move past the end of the list" do
-        search.down.down.down.down.selected_choice.should == "three"
+        search.down.down.down.down.selection.should == "three"
       end
 
       it "won't move past the visible choice limit" do
         config = Configuration.new(2, "", ["one", "two", "three"])
         search = Search.blank(config)
-        search.down.down.down.selected_choice.should == "two"
+        search.down.down.down.selection.should == "two"
       end
 
       it "moves down the filtered search results" do
-        search.append_search_string("t").down.selected_choice.should == "three"
+        search.append_search_string("t").down.selection.should == "three"
       end
     end
 
     it "move up the list" do
-      search.down.up.selected_choice.should == "one"
+      search.down.up.selection.should == "one"
     end
 
     context "when nothing matches" do
       it "handles not matching" do
-        selection = search.append_search_string("doesnt-mtch").selected_choice
+        selection = search.append_search_string("doesnt-mtch").selection
         selection.should == Search::NoSelection
       end
     end

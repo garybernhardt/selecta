@@ -42,8 +42,8 @@ class Selecta
       run_in_screen(config, screen, tty)
     end
 
-    unless search.selected_choice == Search::NoSelection
-      puts search.selected_choice
+    unless search.selection == Search::NoSelection
+      puts search.selection
     end
   rescue ScreenValidator::NotATTY
     $stderr.puts(
@@ -193,7 +193,7 @@ class Search
     @done
   end
 
-  def selected_choice
+  def selection
     matches.fetch(@index) { NoSelection }
   end
 
