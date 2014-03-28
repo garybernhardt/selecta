@@ -5,38 +5,40 @@ describe Search do
                                            Configuration.default_options) }
   let(:search) { Search.blank(config) }
 
-  it "selects the first choice by default" do
-    search.selected_choice.should == "one"
-  end
-
-  describe "moving down the list" do
-    it "moves down the list" do
-      search.down.selected_choice.should == "two"
+  describe "the selected choice" do
+    it "selects the first choice by default" do
+      search.selected_choice.should == "one"
     end
 
-    it "won't move past the end of the list" do
-      search.down.down.down.down.selected_choice.should == "three"
+    describe "moving down the list" do
+      it "moves down the list" do
+        search.down.selected_choice.should == "two"
+      end
+
+      it "won't move past the end of the list" do
+        search.down.down.down.down.selected_choice.should == "three"
+      end
+
+      it "won't move past the visible choice limit" do
+        config = Configuration.new(2, "", ["one", "two", "three"])
+        search = Search.blank(config)
+        search.down.down.down.selected_choice.should == "two"
+      end
+
+      it "moves down the filtered search results" do
+        search.append_search_string("t").down.selected_choice.should == "three"
+      end
     end
 
-    it "won't move past the visible choice limit" do
-      config = Configuration.new(2, "", ["one", "two", "three"])
-      search = Search.blank(config)
-      search.down.down.down.selected_choice.should == "two"
+    it "move up the list" do
+      search.down.up.selected_choice.should == "one"
     end
 
-    it "moves down the filtered search results" do
-      search.append_search_string("t").down.selected_choice.should == "three"
-    end
-  end
-
-  it "move up the list" do
-    search.down.up.selected_choice.should == "one"
-  end
-
-  context "when nothing matches" do
-    it "handles not matching" do
-      selection = search.append_search_string("doesnt-mtch").selected_choice
-      selection.should == Search::NoSelection
+    context "when nothing matches" do
+      it "handles not matching" do
+        selection = search.append_search_string("doesnt-mtch").selected_choice
+        selection.should == Search::NoSelection
+      end
     end
   end
 
