@@ -134,7 +134,7 @@ it as an argument to `git checkout`.
 
 When you put your cursor anywhere in the word "User" and press `<c-g>`, this
 mapping will open Selecta with the search box pre-populated with "User". It's
-an quick and dirty way to find files related to an identifier.
+a quick and dirty way to find files related to an identifier.
 
 ```vimscript
 function! SelectaIdentifier()
