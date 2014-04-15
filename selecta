@@ -38,7 +38,7 @@ class Selecta
     options = Configuration.parse_options(ARGV)
 
     search = Screen.with_screen do |screen, tty|
-      config = Configuration.from_inputs($stdin.readlines, options, screen.height)
+      config = Configuration.from_inputs(ARGF.readlines, options, screen.height)
       run_in_screen(config, screen, tty)
     end
 
