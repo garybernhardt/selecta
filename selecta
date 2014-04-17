@@ -26,6 +26,8 @@ KEY_CTRL_P = ?\C-p
 KEY_CTRL_U = ?\C-u
 KEY_CTRL_H = ?\C-h
 KEY_CTRL_W = ?\C-w
+KEY_CTRL_J = ?\C-j
+KEY_CTRL_M = ?\C-m
 KEY_DELETE = 127.chr # Equivalent to ?\C-?
 
 class Selecta
@@ -86,7 +88,7 @@ class Selecta
     when KEY_CTRL_W then search.delete_word
     when KEY_CTRL_H, KEY_DELETE then search.backspace
 
-    when ?\r then search.done
+    when ?\r, KEY_CTRL_J, KEY_CTRL_M then search.done
     when KEY_CTRL_C then raise SystemExit
 
     when /[[:print:]]/ then search.append_search_string(key.chr)
