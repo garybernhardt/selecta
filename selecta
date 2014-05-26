@@ -29,6 +29,7 @@ KEY_CTRL_W = ?\C-w
 KEY_CTRL_J = ?\C-j
 KEY_CTRL_M = ?\C-m
 KEY_DELETE = 127.chr # Equivalent to ?\C-?
+KEY_ESC    = 27.chr
 
 class Selecta
   VERSION = [0, 0, 2]
@@ -72,14 +73,23 @@ class Selecta
   def ui_event_loop(search, screen, tty)
     while not search.done?
       Renderer.render!(search, screen)
-      search = handle_key(search, tty.get_char)
+      search = handle_key(search, tty)
     end
     search
   end
 
   # On each keystroke, generate a new search object
-  def handle_key(search, key)
+  def handle_key(search, tty)
+    key = tty.get_char
     case key
+
+    when KEY_ESC then
+      if tty.get_char == '['
+        case tty.get_char
+        when 'A' then search.up
+        when 'B' then search.down
+        end
+      end || search
 
     when KEY_CTRL_N then search.down
     when KEY_CTRL_P then search.up
