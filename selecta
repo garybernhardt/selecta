@@ -255,7 +255,7 @@ class Score
       choice = choice.downcase
       query = query.downcase
 
-      match_length = compute_match_length(choice, query)
+      match_length = compute_match_length(choice, query.each_char.to_a)
       return 0.0 unless match_length
 
       # Penalize longer matches.
@@ -266,10 +266,7 @@ class Score
     end
 
     # Find the length of the shortest substring matching the given characters.
-    def compute_match_length(string, query)
-      return query.length if string.include?(query)
-
-      chars = query.chars
+    def compute_match_length(string, chars)
       first_char, *rest = chars
       first_indexes = find_char_in_string(string, first_char)
 
