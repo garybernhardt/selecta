@@ -89,7 +89,6 @@ class Selecta
     when KEY_CTRL_H, KEY_DELETE then search.backspace
 
     when ?\r, KEY_CTRL_J, KEY_CTRL_M then search.done
-    when KEY_CTRL_C then raise SystemExit
 
     when /[[:print:]]/ then search.append_search_string(key.chr)
 
@@ -621,7 +620,5 @@ if $0 == __FILE__
     Selecta.new.main
   rescue Interrupt
     exit(1)
-  rescue SystemExit
-    exit(0)
   end
 end
