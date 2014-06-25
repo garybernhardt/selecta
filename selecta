@@ -363,10 +363,9 @@ class Screen
 
 
   def configure_tty
-    # raw: Disable input and output processing
-    # -echo: Don't echo keys back
-    # cbreak: Set up lots of standard stuff, including INTR signal on ^C
-    tty.stty("raw -echo cbreak")
+    # -echo: terminal doesn't echo typed characters back to the terminal
+    # -icanon: terminal doesn't  interpret special characters (like backspace)
+    tty.stty("-echo -icanon")
   end
 
   def restore_tty
