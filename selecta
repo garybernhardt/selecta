@@ -195,26 +195,26 @@ class Search
   end
 
   def selection
-    matches.fetch(@index) { NoSelection }
+    matches.fetch(index) { NoSelection }
   end
 
   def down
-    index = [@index + 1, matches.count - 1, config.visible_choices - 1].min
-    merge(:index => index)
+    new_index = [index + 1, matches.count - 1, config.visible_choices - 1].min
+    merge(:index => new_index)
   end
 
   def up
-    merge(:index => [@index - 1, 0].max)
+    merge(:index => [index - 1, 0].max)
   end
 
   def append_search_string(string)
     merge(:index => 0,
-          :query => @query + string)
+          :query => query + string)
   end
 
   def backspace
     merge(:index => 0,
-          :query => @query[0...-1])
+          :query => query[0...-1])
   end
 
   def clear_query
@@ -224,11 +224,11 @@ class Search
 
   def delete_word
     merge(:index => 0,
-          :query => @query.sub(/[^ ]* *$/, ""))
+          :query => query.sub(/[^ ]* *$/, ""))
   end
 
   def matches
-    @choices.map do |choice|
+    choices.map do |choice|
       [choice, Score.score(choice, query)]
     end.select do |choice, score|
       score > 0.0
