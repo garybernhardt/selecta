@@ -160,9 +160,13 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
       # fixes this. I don't understand why. I found it via:
       #
       # http://stackoverflow.com/questions/2982677/ruby-1-9-invalid-byte-sequence-in-utf-8
-      utf16 = choice.encode('UTF-16', 'UTF-8', :invalid => :replace, :replace => '')
-      utf16.encode('UTF-8', 'UTF-16')
-    end.map(&:strip)
+      if choice.valid_encoding?
+        choice
+      else
+        utf16 = choice.encode('UTF-16', 'UTF-8', :invalid => :replace, :replace => '')
+        utf16.encode('UTF-8', 'UTF-16')
+      end.strip
+    end
   end
 end
 
