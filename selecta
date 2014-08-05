@@ -45,7 +45,7 @@ class Selecta
     end
 
     unless search.selection == Search::NoSelection
-      puts search.selection
+      puts search.selection.original
     end
   rescue ScreenValidator::NotATTY
     $stderr.puts(
@@ -150,32 +150,78 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
   end
 
   def self.massage_choices(choices)
-    choices.map do |choice|
-      # Encoding to UTF-8 with `:invalid => :replace` isn't good enough; it
-      # still leaves some invalid characters. For example, this string will fail:
-      #
-      # echo "девуш\xD0:" | selecta
-      #
-      # Round-tripping through UTF-16, with `:invalid => :replace` as well,
-      # fixes this. I don't understand why. I found it via:
-      #
-      # http://stackoverflow.com/questions/2982677/ruby-1-9-invalid-byte-sequence-in-utf-8
-      utf16 = choice.encode('UTF-16', 'UTF-8', :invalid => :replace, :replace => '')
-      utf16.encode('UTF-8', 'UTF-16')
-    end.map(&:strip)
+    choices.map { |choice| Choice.from_input(choice) }
+  end
+end
+
+class Choice
+  attr_reader :original, :text
+
+  def initialize(original)
+    @original = original
+    @text = original.downcase
+    @indexes_cache = {}
+  end
+
+  # Find all occurrences of the character in the string, returning their indexes.
+  def char_indexes(char)
+    @indexes_cache[char] ||= begin
+      index = 0
+      indexes = []
+      while index
+        index = text.index(char, index)
+        if index
+          indexes << index
+          index += 1
+        end
+      end
+      indexes
+    end
+  end
+
+  def index(char, starting_index)
+    char_indexes(char).find { |index| index >= starting_index }
+  end
+
+  def self.from_input(input)
+    new(
+      if input.valid_encoding?
+        input
+      else
+        # Encoding to UTF-8 with `:invalid => :replace` isn't good enough; it
+        # still leaves some invalid characters. For example, this string will fail:
+        #
+        # echo "девуш\xD0:" | selecta
+        #
+        # Round-tripping through UTF-16, with `:invalid => :replace` as well,
+        # fixes this. I don't understand why. I found it via:
+        #
+        # http://stackoverflow.com/questions/2982677/ruby-1-9-invalid-byte-sequence-in-utf-8
+        utf16 = input.encode('UTF-16', 'UTF-8', :invalid => :replace, :replace => '')
+        utf16.encode('UTF-8', 'UTF-16')
+      end.strip
+    )
   end
 end
 
 class Search
   attr_reader :choices, :index, :query, :config
 
-  def initialize(vars)
+  def initialize(vars, precomputed_matches = nil, candidates = nil)
     @vars = vars
     @config = vars.fetch(:config)
     @choices = vars.fetch(:choices)
     @index = vars.fetch(:index)
     @query = vars.fetch(:query)
     @done = vars.fetch(:done)
+    # Accept optional precomputed matches
+    @matches = precomputed_matches
+    # Accept optional filtered list of candidates for matching
+    @candidates = candidates
+  end
+
+  def candidates
+    @candidates || @choices
   end
 
   def self.blank(config)
@@ -190,31 +236,36 @@ class Search
     Search.new(@vars.merge(vars))
   end
 
+  def view(vars)
+    Search.new(@vars.merge(vars), @matches)
+  end
+
   def done?
     @done
   end
 
   def selection
-    matches.fetch(@index) { NoSelection }
+    matches.fetch(index) { NoSelection }
   end
 
   def down
-    index = [@index + 1, matches.count - 1, config.visible_choices - 1].min
-    merge(:index => index)
+    new_index = [index + 1, matches.count - 1, config.visible_choices - 1].min
+    view(:index => new_index)
   end
 
   def up
-    merge(:index => [@index - 1, 0].max)
+    view(:index => [index - 1, 0].max)
   end
 
   def append_search_string(string)
     merge(:index => 0,
-          :query => @query + string)
+          :query => query + string,
+          :candidates => matches)
   end
 
   def backspace
     merge(:index => 0,
-          :query => @query[0...-1])
+          :query => query[0...-1])
   end
 
   def clear_query
@@ -224,23 +275,25 @@ class Search
 
   def delete_word
     merge(:index => 0,
-          :query => @query.sub(/[^ ]* *$/, ""))
+          :query => query.sub(/[^ ]* *$/, ""))
   end
 
   def matches
-    @choices.map do |choice|
-      [choice, Score.score(choice, query)]
+    return @matches if @matches
+    query_chars = query.downcase.each_char.to_a
+    @matches = candidates.map do |choice|
+      [choice, Score.score(choice, query_chars)]
     end.select do |choice, score|
       score > 0.0
     end.sort_by do |choice, score|
       -score
     end.map do |choice, score|
       choice
-    end
+    end.freeze
   end
 
   def done
-    merge(:done => true)
+    view(:done => true)
   end
 
   class NoSelection; end
@@ -248,30 +301,27 @@ end
 
 class Score
   class << self
-    def score(choice, query)
-      return 1.0 if query.length == 0
-      return 0.0 if choice.length == 0
+    def score(choice, query_chars)
+      return 1.0 if query_chars.length == 0
+      return 0.0 if choice.text.length == 0
 
-      choice = choice.downcase
-      query = query.downcase
-
-      match_length = compute_match_length(choice, query.each_char.to_a)
+      match_length = compute_match_length(choice, query_chars)
       return 0.0 unless match_length
 
       # Penalize longer matches.
-      score = query.length.to_f / match_length.to_f
+      score = query_chars.length.to_f / match_length.to_f
 
       # Normalize vs. the length of the choice, penalizing longer strings.
-      score / choice.length
+      score / choice.text.length
     end
 
     # Find the length of the shortest substring matching the given characters.
-    def compute_match_length(string, chars)
+    def compute_match_length(choice, chars)
       first_char, *rest = chars
-      first_indexes = find_char_in_string(string, first_char)
+      first_indexes = choice.char_indexes(first_char)
 
       first_indexes.map do |first_index|
-        last_index = find_end_of_match(string, rest, first_index)
+        last_index = find_end_of_match(choice, rest, first_index)
         if last_index
           last_index - first_index + 1
         else
@@ -280,25 +330,11 @@ class Score
       end.compact.min
     end
 
-    # Find all occurrences of the character in the string, returning their indexes.
-    def find_char_in_string(string, char)
-      index = 0
-      indexes = []
-      while index
-        index = string.index(char, index)
-        if index
-          indexes << index
-          index += 1
-        end
-      end
-      indexes
-    end
-
     # Find each of the characters in the string, moving strictly left to right.
-    def find_end_of_match(string, chars, first_index)
+    def find_end_of_match(choice, chars, first_index)
       last_index = first_index
       chars.each do |this_char|
-        index = string.index(this_char, last_index + 1)
+        index = choice.index(this_char, last_index + 1)
         return nil unless index
         last_index = index
       end
@@ -319,7 +355,7 @@ class Renderer < Struct.new(:search, :screen)
 
   def render
     search_line = "> " + search.query
-    matches = search.matches
+    matches = search.matches.map(&:original)
     unless matches.empty?
       matches[search.index] = Text[:inverse, matches.fetch(search.index), :reset]
     end
