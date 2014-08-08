@@ -216,7 +216,7 @@ class Search
   end
 
   def down
-    index = [@index + 1, matches.count - 1, config.visible_choices - 1].min
+    index = [@index + 1, matches.count - 1, @config.visible_choices - 1].min
     merge(:index => index)
   end
 
