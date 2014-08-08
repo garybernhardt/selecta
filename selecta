@@ -171,15 +171,18 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
 end
 
 class Search
-  attr_reader :choices, :index, :query, :config
+  attr_reader :choices, :index, :query, :config, :matches
 
   def initialize(vars)
-    @vars = vars
     @config = vars.fetch(:config)
     @choices = vars.fetch(:choices)
     @index = vars.fetch(:index)
     @query = vars.fetch(:query)
     @done = vars.fetch(:done)
+
+    # Lazily compute matches if there aren't any
+    @matches = vars.fetch(:matches) { compute_matches }
+    @vars = vars.merge(:matches => @matches)
   end
 
   def self.blank(config)
@@ -190,8 +193,18 @@ class Search
         :done => false)
   end
 
-  def merge(vars)
-    Search.new(@vars.merge(vars))
+  # Construct a new Search by merging in a hash of changes.
+  def merge(changes)
+    vars = @vars.merge(changes)
+
+    # If the query changed, throw away the old matches so that new ones will be
+    # computed.
+    matches_are_stale = vars.fetch(:query) != @query
+    if matches_are_stale
+      vars = vars.reject { |key| key == :matches }
+    end
+
+    Search.new(vars)
   end
 
   def done?
@@ -231,9 +244,15 @@ class Search
           :query => @query.sub(/[^ ]* *$/, ""))
   end
 
-  def matches
+  def done
+    merge(:done => true)
+  end
+
+  private
+
+  def compute_matches
     @choices.map do |choice|
-      [choice, Score.score(choice, query)]
+      [choice, Score.score(choice, @query)]
     end.select do |choice, score|
       score > 0.0
     end.sort_by do |choice, score|
@@ -241,10 +260,6 @@ class Search
     end.map do |choice, score|
       choice
     end
-  end
-
-  def done
-    merge(:done => true)
   end
 
   class NoSelection; end
