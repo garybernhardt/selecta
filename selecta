@@ -322,11 +322,14 @@ class Renderer < Struct.new(:search, :screen)
   end
 
   def render
+    index, matches = search.index, search.matches
     search_line = "> " + search.query
-    matches = search.matches
-    unless matches.empty?
-      matches[search.index] = Text[:inverse, matches.fetch(search.index), :reset]
-    end
+    selected = if matches.empty?
+                 matches[index]
+               else
+                 Text[:inverse, matches.fetch(search.index), :reset]
+               end
+    matches = matches[0...index] + [selected] + matches[(index + 1)..-1]
     matches = correct_match_count(matches)
     lines = [search_line] + matches
     Rendered.new(lines, search_line)
