@@ -216,17 +216,17 @@ class Search
   end
 
   def down
-    index = [@index + 1, max_visible_index].min
-    merge(:index => @index == index ? 0 : index)
+    index = (@index + 1) % max_visible_choices
+    merge(:index => index)
   end
 
   def up
-    index = [@index - 1, 0].max
-    merge(:index => @index == 0 ? max_visible_index : index)
+    index = (@index - 1) % max_visible_choices
+    merge(:index => index)
   end
 
-  def max_visible_index
-    [matches.count - 1, config.visible_choices - 1].min
+  def max_visible_choices
+    [@config.visible_choices, choices.count].min
   end
 
   def append_search_string(string)
