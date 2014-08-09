@@ -18,7 +18,7 @@ describe Search do
       it "loops around when reaching the end of the list" do
         search.down.down.down.down.selection.should == "two"
       end
-      
+
       it "loops around when reaching the top of the list" do
         search.up.up.selection.should == "two"
       end
