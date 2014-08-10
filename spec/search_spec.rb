@@ -15,11 +15,15 @@ describe Search do
         expect(search.down.selection).to eq "two"
       end
 
-      it "won't move past the end of the list" do
-        expect(search.down.down.down.down.selection).to eq "three"
+      it "loops around when reaching the end of the list" do
+        expect(search.down.down.down.down.selection).to eq "two"
       end
 
-      it "won't move past the visible choice limit" do
+      it "loops around when reaching the top of the list" do
+        expect(search.up.up.selection).to eq "two"
+      end
+
+      it "loops around when reaching the visible choice limit" do
         config = Configuration.new(2, "", ["one", "two", "three"])
         search = Search.blank(config)
         expect(search.down.down.down.selection).to eq "two"
