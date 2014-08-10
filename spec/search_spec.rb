@@ -7,37 +7,37 @@ describe Search do
 
   describe "the selected choice" do
     it "selects the first choice by default" do
-      search.selection.should == "one"
+      expect(search.selection).to eq "one"
     end
 
     describe "moving down the list" do
       it "moves down the list" do
-        search.down.selection.should == "two"
+        expect(search.down.selection).to eq "two"
       end
 
       it "won't move past the end of the list" do
-        search.down.down.down.down.selection.should == "three"
+        expect(search.down.down.down.down.selection).to eq "three"
       end
 
       it "won't move past the visible choice limit" do
         config = Configuration.new(2, "", ["one", "two", "three"])
         search = Search.blank(config)
-        search.down.down.down.selection.should == "two"
+        expect(search.down.down.down.selection).to eq "two"
       end
 
       it "moves down the filtered search results" do
-        search.append_search_string("t").down.selection.should == "three"
+        expect(search.append_search_string("t").down.selection).to eq "three"
       end
     end
 
     it "move up the list" do
-      search.down.up.selection.should == "one"
+      expect(search.down.up.selection).to eq "one"
     end
 
     context "when nothing matches" do
       it "handles not matching" do
         selection = search.append_search_string("doesnt-mtch").selection
-        selection.should == Search::NoSelection
+        expect(selection).to be Search::NoSelection
       end
     end
   end
@@ -46,31 +46,31 @@ describe Search do
     let(:search) { Search.blank(config).append_search_string("e") }
 
     it "backspaces over characters" do
-      search.query.should == "e"
-      search.backspace.query.should == ""
+      expect(search.query).to eq "e"
+      expect(search.backspace.query).to eq ""
     end
 
     it "resets the index" do
-      search.backspace.index.should == 0
+      expect(search.backspace.index).to eq 0
     end
   end
 
   it "deletes words" do
-    search.append_search_string("").delete_word.query.should == ""
-    search.append_search_string("a").delete_word.query.should == ""
-    search.append_search_string("a ").delete_word.query.should == ""
-    search.append_search_string("a b").delete_word.query.should == "a "
-    search.append_search_string("a b ").delete_word.query.should == "a "
-    search.append_search_string(" a b").delete_word.query.should == " a "
+    expect(search.append_search_string("").delete_word.query).to eq ""
+    expect(search.append_search_string("a").delete_word.query).to eq ""
+    expect(search.append_search_string("a ").delete_word.query).to eq ""
+    expect(search.append_search_string("a b").delete_word.query).to eq "a "
+    expect(search.append_search_string("a b ").delete_word.query).to eq "a "
+    expect(search.append_search_string(" a b").delete_word.query).to eq " a "
   end
 
   it "clears query" do
-    search.append_search_string("").clear_query.query.should == ""
-    search.append_search_string("a").clear_query.query.should == ""
-    search.append_search_string("a ").clear_query.query.should == ""
-    search.append_search_string("a b").clear_query.query.should == ""
-    search.append_search_string("a b ").clear_query.query.should == ""
-    search.append_search_string(" a b").clear_query.query.should == ""
+    expect(search.append_search_string("").clear_query.query).to eq ""
+    expect(search.append_search_string("a").clear_query.query).to eq ""
+    expect(search.append_search_string("a ").clear_query.query).to eq ""
+    expect(search.append_search_string("a b").clear_query.query).to eq ""
+    expect(search.append_search_string("a b ").clear_query.query).to eq ""
+    expect(search.append_search_string(" a b").clear_query.query).to eq ""
   end
 
   describe "matching" do
@@ -78,20 +78,20 @@ describe Search do
       config = Configuration.from_inputs(["a", "b"],
                                          Configuration.default_options)
       search = Search.blank(config)
-      search.append_search_string("a").matches.should == ["a"]
+      expect(search.append_search_string("a").matches).to eq ["a"]
     end
 
     it "sorts the choices by score" do
       config = Configuration.from_inputs(["spec/search_spec.rb", "search.rb"],
                                          Configuration.default_options)
       search = Search.blank(config)
-      search.append_search_string("search").matches.should == ["search.rb",
-                                                               "spec/search_spec.rb"]
+      expect(search.append_search_string("search").matches).to eq ["search.rb",
+                                                                   "spec/search_spec.rb"]
     end
   end
 
   it "knows when it's done" do
-    search.done?.should == false
-    search.done.done?.should == true
+    expect(search.done?).to eq false
+    expect(search.done.done?).to eq true
   end
 end

@@ -8,7 +8,7 @@ describe Renderer do
   it "renders selected matches" do
     search = Search.blank(config).down
     renderer = Renderer.new(search)
-    renderer.render.choices.should == [
+    expect(renderer.render.choices).to eq [
       "> ",
       "one",
       Text[:inverse, "two", :reset],
@@ -18,7 +18,7 @@ describe Renderer do
   it "renders with no matches" do
     search = Search.blank(config).append_search_string("z")
     renderer = Renderer.new(search)
-    renderer.render.choices.should == [
+    expect(renderer.render.choices).to eq [
       "> z",
       "",
       "",
@@ -31,7 +31,7 @@ describe Renderer do
                                        2)
     search = Search.blank(config)
     renderer = Renderer.new(search)
-    renderer.render.choices.should == [
+    expect(renderer.render.choices).to eq [
       "> ",
       Text[:inverse, "one", :reset],
     ]
