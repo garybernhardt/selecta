@@ -16,11 +16,11 @@ describe Search do
       end
 
       it "loops around when reaching the end of the list" do
-        search.down.down.down.down.selection.should == "two"
+        expect(search.down.down.down.down.selection).to eq "two"
       end
 
       it "loops around when reaching the top of the list" do
-        search.up.up.selection.should == "two"
+        expect(search.up.up.selection).to eq "two"
       end
 
       it "loops around when reaching the visible choice limit" do
