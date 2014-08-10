@@ -339,12 +339,10 @@ class Renderer < Struct.new(:search)
   def render
     index, matches = search.index, search.matches
     search_line = "> " + search.query
-    selected = if matches.empty?
-                 matches[index]
-               else
-                 Text[:inverse, matches.fetch(search.index), :reset]
-               end
-    matches = matches[0...index] + [selected] + matches[(index + 1)..-1]
+    unless matches.empty?
+      selection_line = Text[:inverse, matches.fetch(search.index), :reset]
+      matches = replace_array_element(matches, search.index, selection_line)
+    end
     matches = correct_match_count(matches)
     lines = [search_line] + matches
     Rendered.new(lines, search_line)
@@ -357,6 +355,14 @@ class Renderer < Struct.new(:search)
   end
 
   class Rendered < Struct.new(:choices, :search_line)
+  end
+
+  private
+
+  def replace_array_element(array, index, new_value)
+    array = array.dup
+    array[index] = new_value
+    array
   end
 end
 
