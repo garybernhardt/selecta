@@ -326,9 +326,9 @@ class Score
   end
 end
 
-class Renderer < Struct.new(:search, :screen)
+class Renderer < Struct.new(:search)
   def self.render!(search, screen)
-    rendered = Renderer.new(search, screen).render
+    rendered = Renderer.new(search).render
     start_line = screen.height - search.config.visible_choices - 1
     screen.with_cursor_hidden do
       screen.write_lines(start_line, rendered.choices)
