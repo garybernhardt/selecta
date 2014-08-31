@@ -458,7 +458,7 @@ class Screen
 
   def write_unrestricted(line, column, text)
     text = Text[:default, text] unless text.is_a? Text
-    write_text_object(line, column,text)
+    write_text_object(line, column, text)
   end
 
   def write_text_object(line, column, text)
