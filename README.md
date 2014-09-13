@@ -41,7 +41,7 @@ it's also an interactive program (it accepts user keystrokes and draws a UI).
 It directly opens `/dev/tty` to do the latter.
 
 With that exception aside, Selecta is a normal, well-behaved Unix tool. If a
-selection is made, its path will be written to stdout with a single trailing
+selection is made, the line will be written to stdout with a single trailing
 newline. If no selection is made (meaning the user killed Selecta with ^C), it
 will write nothing to stdout and exit with status code 1.
 
