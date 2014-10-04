@@ -345,8 +345,8 @@ class Renderer < Struct.new(:search)
     index, matches = search.index, search.matches
     search_line = "> " + search.query
     unless matches.empty?
-      selection_line = Text[:inverse, matches.fetch(search.index), :reset]
-      matches = replace_array_element(matches, search.index, selection_line)
+      selection_line = Text[:inverse, matches.fetch(index), :reset]
+      matches = replace_array_element(matches, index, selection_line)
     end
     matches = correct_match_count(matches)
     lines = [search_line] + matches
