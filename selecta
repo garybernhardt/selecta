@@ -20,7 +20,6 @@ end
 require "optparse"
 require "io/console"
 
-KEY_CTRL_C = ?\C-c
 KEY_CTRL_N = ?\C-n
 KEY_CTRL_P = ?\C-p
 KEY_CTRL_U = ?\C-u
