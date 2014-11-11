@@ -28,6 +28,7 @@ KEY_CTRL_W = ?\C-w
 KEY_CTRL_J = ?\C-j
 KEY_CTRL_M = ?\C-m
 KEY_DELETE = 127.chr # Equivalent to ?\C-?
+KEY_ESC    = ?\C-[
 
 class Selecta
   VERSION = [0, 0, 2]
@@ -43,7 +44,9 @@ class Selecta
       run_in_screen(config, screen, tty)
     end
 
-    unless search.selection == Search::NoSelection
+    if search.selection == Search::NoSelection
+      exit(1)
+    else
       puts search.selection
     end
   rescue ScreenValidator::NotATTY
@@ -70,7 +73,7 @@ class Selecta
 
   # Use the search and screen to process user actions until they quit.
   def ui_event_loop(search, screen, tty)
-    while not search.done?
+    while !search.done?
       Renderer.render!(search, screen)
       search = handle_key(search, tty.get_char)
     end
@@ -89,6 +92,8 @@ class Selecta
     when KEY_CTRL_H, KEY_DELETE then search.backspace
 
     when ?\r, KEY_CTRL_J, KEY_CTRL_M then search.done
+
+    when KEY_ESC then search.abort
 
     when /[[:print:]]/ then search.append_search_string(key.chr)
 
@@ -179,6 +184,7 @@ class Search
     @index = vars.fetch(:index)
     @query = vars.fetch(:query)
     @done = vars.fetch(:done)
+    @aborted = vars.fetch(:aborted)
 
     # Lazily compute matches if there aren't any
     @matches = vars.fetch(:matches) { compute_matches }
@@ -190,7 +196,8 @@ class Search
         :choices => config.choices,
         :index => 0,
         :query => config.initial_search,
-        :done => false)
+        :done => false,
+        :aborted => false)
   end
 
   # Construct a new Search by merging in a hash of changes.
@@ -208,11 +215,15 @@ class Search
   end
 
   def done?
-    @done
+    @done || @aborted
   end
 
   def selection
-    matches.fetch(@index) { NoSelection }
+    if @aborted
+      NoSelection
+    else
+      matches.fetch(@index) { NoSelection }
+    end
   end
 
   def down
@@ -251,6 +262,10 @@ class Search
 
   def done
     merge(:done => true)
+  end
+
+  def abort
+    merge(:aborted => true)
   end
 
   private
