@@ -49,6 +49,7 @@ class Selecta
   rescue ScreenValidator::NotATTY
     $stderr.puts(
       "Can't get a working TTY. Selecta requires an ANSI-compatible terminal.")
+    exit(1)
   end
 
   def run_in_screen(config, screen, tty)
