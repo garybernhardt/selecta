@@ -100,8 +100,8 @@ describe Search do
   end
 
   it "knows when it's aborted" do
-    expect(search.aborted?).to eq false
-    expect(search.abort.done?).to eq false
+    expect(search.done?).to eq false
+    expect(search.abort.done?).to eq true
     expect(search.abort.selection).to eq Search::NoSelection
   end
 end
