@@ -57,12 +57,13 @@ class Selecta
 
   def run_in_screen(config, screen, tty)
     search = Search.blank(config)
+    color = config.color
 
     # We emit the number of lines we'll use later so we don't clobber whatever
     # was already on the screen.
     config.visible_choices.times { tty.puts }
     begin
-      search = ui_event_loop(search, screen, tty)
+      search = ui_event_loop(search, screen, tty, color)
     ensure
       # Always move the cursor to the bottom so the next program doesn't draw
       # over whatever we left on the screen.
@@ -72,9 +73,9 @@ class Selecta
   end
 
   # Use the search and screen to process user actions until they quit.
-  def ui_event_loop(search, screen, tty)
+  def ui_event_loop(search, screen, tty, color)
     while !search.done?
-      Renderer.render!(search, screen)
+      Renderer.render!(search, screen, color)
       search = handle_key(search, tty.get_char)
     end
     search
@@ -102,8 +103,8 @@ class Selecta
   end
 end
 
-class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
-  def initialize(visible_choices, initialize, choices)
+class Configuration < Struct.new(:visible_choices, :initial_search, :choices, :color)
+  def initialize(visible_choices, initialize, choices, color=nil)
     # Constructor is defined to force argument presence; otherwise Struct
     # defaults missing arguments to nil
     super
@@ -114,7 +115,7 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
     visible_choices = [20, screen_height - 1].min
 
     choices = massage_choices(choices)
-    Configuration.new(visible_choices, options.fetch(:search), choices)
+    Configuration.new(visible_choices, options.fetch(:search), choices, options[:color])
   end
 
   def self.default_options
@@ -140,6 +141,10 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
       options[:search] = ""
       opts.on("-s", "--search SEARCH", "Specify an initial search string") do |search|
         options[:search] = search
+      end
+
+      opts.on("-c", "--color COLOR", "Specify the foreground and background color of your selection. Example: black_cyan") do |color|
+        options[:color] = color.to_sym
       end
     end
 
@@ -347,8 +352,8 @@ class Score
 end
 
 class Renderer < Struct.new(:search)
-  def self.render!(search, screen)
-    rendered = Renderer.new(search).render
+  def self.render!(search, screen, color=nil)
+    rendered = Renderer.new(search).render(color)
     start_line = screen.height - search.config.visible_choices - 1
     screen.with_cursor_hidden do
       screen.write_lines(start_line, rendered.choices)
@@ -356,11 +361,15 @@ class Renderer < Struct.new(:search)
     end
   end
 
-  def render
+  def render(color=nil)
     index, matches = search.index, search.matches
     search_line = "> " + search.query
     unless matches.empty?
-      selection_line = Text[:inverse, matches.fetch(index), :reset]
+      if color
+        selection_line = Text[color, matches.fetch(index), :reset]
+      else
+        selection_line = Text[:inverse, matches.fetch(index), :reset]
+      end
       matches = replace_array_element(matches, index, selection_line)
     end
     matches = correct_match_count(matches)
