@@ -116,10 +116,10 @@ You can also use selecta to open buffers. Just add the following to your .vimrc:
 ```vimscript
 function! SelectaBuffer()
   let buffers = map(range(1, bufnr("$")), 'bufname(bufnr(v:val))')
-  call SelectaCommand('echo "' . join(buffers, "\n") . '"', "", ":e")
+  call SelectaCommand('echo "' . join(buffers, "\n") . '"', "", ":b")
 endfunction
 
-" Fuzzy select a buffer. Open the selected buffer with :e.
+" Fuzzy select a buffer. Open the selected buffer with :b.
 nnoremap <leader>b :call SelectaBuffer()<cr>
 ```
 
