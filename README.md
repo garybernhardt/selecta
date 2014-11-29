@@ -161,16 +161,21 @@ proj() {
 
 #### Insert fuzzy-found paths directly into the shell command line
 
-This only works with zsh (patches to make it work with Bash would be
-appreciated). Put it in your ~/.zshrc. Then, whenever you press ^S, zsh will
-run `find * -type f | selecta` and append the resulting selected path to the
-current command line.
+Whenever you press ^S, your shell will run `find * -type f | selecta` and
+append the resulting selected path to the current command line.
 
-Caveats: 1) You're running `find` in the current working directory. If you do
-it in a large directory, like ~, then it's going to take a while. 2) This also
-disables flow control to free up the ^S keystroke. If you normally use ^S and
-^Q, you may want to map to a different key and remove the `unsetopt
-flowcontrol`.
+Caveats:
+
+1. You're running `find` in the current working directory. If you do it in a
+   large directory, like ~, then it's going to take a while.
+
+2. This also disables flow control to free up the ^S keystroke. If you normally
+   use ^S and ^Q, you may want to map to a different key (and in zsh's case
+   remove the `unsetopt flowcontrol`).
+
+##### zsh
+
+Put it in your `~/.zshrc`.
 
 ```shell
 # By default, ^S freezes terminal output and ^Q resumes it. Disable that so
@@ -194,6 +199,19 @@ zle -N insert-selecta-path-in-command-line
 # Bind the key to the newly created widget
 bindkey "^S" "insert-selecta-path-in-command-line"
 ```
+
+##### bash
+
+Put it in your `~/.bashrc`.
+
+```shell
+function insert_selecta_path_in_command_line() {
+    READLINE_LINE+=$(find * -type f | selecta)
+}
+
+bind -x '"\C-s":"insert_selecta_path_in_command_line"'
+```
+
 
 ## FAQ
 
