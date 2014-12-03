@@ -358,7 +358,7 @@ class Renderer < Struct.new(:search)
 
   def render
     index, matches = search.index, search.matches
-    search_line = "> " + search.query
+    search_line = "#{match_count_label} > " + search.query
     unless matches.empty?
       selection_line = Text[:inverse, matches.fetch(index), :reset]
       matches = replace_array_element(matches, index, selection_line)
@@ -366,6 +366,13 @@ class Renderer < Struct.new(:search)
     matches = correct_match_count(matches)
     lines = [search_line] + matches
     Rendered.new(lines, search_line)
+  end
+
+  def match_count_label
+    choice_count = search.choices.length
+    max_label_width = choice_count.to_s.length
+    match_count = search.matches.count
+    match_count.to_s.rjust(max_label_width)
   end
 
   def correct_match_count(matches)

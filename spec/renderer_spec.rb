@@ -9,7 +9,7 @@ describe Renderer do
     search = Search.blank(config).down
     renderer = Renderer.new(search)
     expect(renderer.render.choices).to eq [
-      "> ",
+      "3 > ",
       "one",
       Text[:inverse, "two", :reset],
     ]
@@ -19,20 +19,20 @@ describe Renderer do
     search = Search.blank(config).append_search_string("z")
     renderer = Renderer.new(search)
     expect(renderer.render.choices).to eq [
-      "> z",
+      "0 > z",
       "",
       "",
     ]
   end
 
-  it "respects the visible choice limit" do
+  it "respects the screen height" do
     config = Configuration.from_inputs(["one", "two", "three"],
                                        Configuration.default_options,
                                        2)
     search = Search.blank(config)
     renderer = Renderer.new(search)
     expect(renderer.render.choices).to eq [
-      "> ",
+      "3 > ",
       Text[:inverse, "one", :reset],
     ]
   end
