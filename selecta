@@ -237,7 +237,7 @@ class Search
   end
 
   def max_visible_choices
-    [@config.visible_choices, choices.count].min
+    [@config.visible_choices, choices.count, matches.count].min
   end
 
   def append_search_string(string)
