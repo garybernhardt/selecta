@@ -227,13 +227,21 @@ class Search
   end
 
   def down
-    index = (@index + 1) % max_visible_choices
-    merge(:index => index)
+    if max_visible_choices > 0
+      index = (@index + 1) % max_visible_choices
+      merge(:index => index)
+    else
+      self
+    end
   end
 
   def up
-    index = (@index - 1) % max_visible_choices
-    merge(:index => index)
+    if max_visible_choices > 0
+      index = (@index - 1) % max_visible_choices
+      merge(:index => index)
+    else
+      self
+    end
   end
 
   def max_visible_choices

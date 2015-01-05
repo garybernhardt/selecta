@@ -30,12 +30,24 @@ describe Search do
       end
 
       describe "filtered search results" do
-        it "moves down the list" do
-          expect(search.append_search_string("t").down.selection).to eq "three"
+        it "moves up and down the list" do
+          search = self.search.append_search_string("t")
+          expect(search.down.selection).to eq "three"
+          expect(search.up.selection).to eq "three"
         end
 
         it "loops around when reaching the end" do
-          expect(search.append_search_string("t").down.down.selection).to eq "two"
+          search = self.search.append_search_string("t")
+          expect(search.down.down.selection).to eq "two"
+          expect(search.up.selection).to eq "three"
+        end
+      end
+
+      describe "everything filtered out" do
+        it "can't move up or down" do
+          search = self.search.append_search_string("zzz")
+          expect(search.down.selection).to eq Search::NoSelection
+          expect(search.up.selection).to eq Search::NoSelection
         end
       end
     end
