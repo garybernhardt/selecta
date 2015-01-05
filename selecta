@@ -31,7 +31,7 @@ KEY_DELETE = 127.chr # Equivalent to ?\C-?
 KEY_ESC    = ?\C-[
 
 class Selecta
-  VERSION = [0, 0, 4]
+  VERSION = [0, 0, 5]
 
   def main
     # We have to parse options before setting up the screen or trying to read
