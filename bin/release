@@ -1,0 +1,54 @@
+#!/usr/bin/env ruby
+
+def main
+  ensure_repo_is_clean
+  version = get_version
+  update_source_version(version)
+  commit(version)
+  tag(version)
+end
+
+def ensure_repo_is_clean
+  status = `git status -s` or raise "git status failed"
+  repo_is_clean = status.strip.empty?
+
+  unless repo_is_clean
+    raise "cowardly refusing to release in a dirty repo"
+  end
+end
+
+def get_version
+  version_string = ARGV.fetch(0).strip
+  components = version_string.split(/\./)
+  Version.new(version_string, components)
+end
+
+class Version < Struct.new(:string, :components)
+end
+
+def update_source_version(version)
+  source = File.readlines("selecta").map(&:rstrip)
+  updated_source = source.map do |line|
+    if line =~ /^(\s+)VERSION =/
+      indentation = $1
+      indentation + "VERSION = [" + version.components.join(", ") + "]"
+    else
+      line
+    end
+  end.join("\n") + "\n"
+
+  File.write("selecta", updated_source)
+end
+
+def commit(version)
+  system("git add --all") or raise "git add failed"
+  system("git commit -m 'update version to #{version.string}'") or raise "git commit failed"
+end
+
+def tag(version)
+  tag = "v" + version.string
+  system("git tag #{tag}") or raise "git tag failed"
+  system("git show #{tag}") or raise "git show failed"
+end
+
+main
