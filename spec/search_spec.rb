@@ -29,8 +29,14 @@ describe Search do
         expect(search.down.down.down.selection).to eq "two"
       end
 
-      it "moves down the filtered search results" do
-        expect(search.append_search_string("t").down.selection).to eq "three"
+      describe "filtered search results" do
+        it "moves down the list" do
+          expect(search.append_search_string("t").down.selection).to eq "three"
+        end
+
+        it "loops around when reaching the end" do
+          expect(search.append_search_string("t").down.down.selection).to eq "two"
+        end
       end
     end
 
