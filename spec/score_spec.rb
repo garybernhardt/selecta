@@ -82,8 +82,4 @@ describe "score" do
       expect(score(loose + tight, "12")).to eq 1.0 / (loose + tight).length
     end
   end
-
-  xit "prefers acronyms to normal matches" do
-    expect(score("Foo Bar", "fb")).to be > score("foo bar", "fb")
-  end
 end
