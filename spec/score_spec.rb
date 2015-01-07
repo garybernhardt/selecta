@@ -72,7 +72,7 @@ describe "score" do
     end
 
     it "sometimes scores longer strings higher if they have a better match" do
-      expect(score("long 12 long", "12")).to be > score("1 long 2", "12")
+      expect(score("longx12xlong", "12")).to be > score("1xlongx2", "12")
     end
 
     it "scores the tighter of two matches, regardless of order" do
@@ -80,6 +80,14 @@ describe "score" do
       loose = "1padding2"
       expect(score(tight + loose, "12")).to eq 1.0 / (tight + loose).length
       expect(score(loose + tight, "12")).to eq 1.0 / (loose + tight).length
+    end
+  end
+
+  describe "word boundaries" do
+    it "works" do
+      expect(score("x/yaaaz/yz", "xyz")).to eq score("xyzaaaaaaa", "xyz")
+      expect(score("x-x-y-y-z-z", "xyz")).to eq score("xyz--------", "xyz")
+      expect(score("xayazxayz", "xyz")).to eq score("xayzaaaaa", "xyz")
     end
   end
 end
