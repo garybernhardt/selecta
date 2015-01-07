@@ -289,34 +289,21 @@ class Search
 end
 
 class Match < Struct.new(:choice, :score, :match_start, :match_end)
-  def string_before_match
-    choice[0...match_start]
-  end
-
-  def match_string
-    choice[match_start..match_end]
-  end
-
-  def string_after_match
-    choice[(match_end + 1)..-1]
+  def to_text
+    before = choice[0...match_start]
+    matching = choice[match_start..match_end]
+    after = choice[(match_end + 1)..-1]
+    Text[before, :red, matching, :reset, after]
   end
 end
 
 class TrivialMatch < Struct.new(:choice)
-  def string_before_match
-    choice
-  end
-
   def score
     0
   end
 
-  def match_string
-    ""
-  end
-
-  def string_after_match
-    ""
+  def to_text
+    Text[choice]
   end
 end
 
@@ -410,15 +397,7 @@ class Renderer < Struct.new(:search)
     search_line = "#{match_count_label} > " + search.query
 
     matches = search.matches[0...search.config.visible_choices]
-
-    matches = matches.map do |match|
-      Text[match.string_before_match,
-           :red,
-           match.match_string,
-           :reset,
-           match.string_after_match]
-    end
-
+    matches = matches.map(&:to_text)
     matches = correct_match_count(matches)
     lines = [search_line] + matches
     Rendered.new(lines, search_line)

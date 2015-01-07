@@ -10,8 +10,8 @@ describe Renderer do
     renderer = Renderer.new(search)
     expect(renderer.render.choices).to eq [
       "3 > ",
-      Text["one", :red, "", :reset, ""],
-      Text["two", :red, "", :reset, ""],
+      Text["one"],
+      Text["two"],
     ]
   end
 
@@ -33,7 +33,7 @@ describe Renderer do
     renderer = Renderer.new(search)
     expect(renderer.render.choices).to eq [
       "3 > ",
-      Text["one", :red, "", :reset, ""],
+      Text["one"],
     ]
   end
 
