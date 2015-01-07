@@ -213,7 +213,16 @@ class Search
   end
 
   def selection
-    matches.fetch(@index) { NoSelection }
+    if @aborted
+      NoSelection
+    else
+      match = matches.fetch(@index) { NoSelection }
+      if match == NoSelection
+        match
+      else
+        match.choice
+      end
+    end
   end
 
   def down
@@ -257,12 +266,13 @@ class Search
   def compute_matches
     @choices.map do |choice|
       [choice, Score.score(choice, @query)]
-    end.select do |choice, score|
-      score > 0.0
-    end.sort_by do |choice, score|
-      -score
-    end.map do |choice, score|
-      choice
+    end.reject do |choice, match|
+      match.score == Float::INFINITY
+    end.sort_by do |choice, match|
+      # Sort by score. In the case of a tie, favor shorter choice strings.
+      [-match.score, match.choice.length]
+    end.map do |choice, match|
+      match
     end
   end
 
@@ -278,23 +288,68 @@ class Search
   class NoSelection; end
 end
 
+class Match < Struct.new(:choice, :score, :match_start, :match_end)
+  def string_before_match
+    choice[0...match_start]
+  end
+
+  def match_string
+    choice[match_start..match_end]
+  end
+
+  def string_after_match
+    choice[(match_end + 1)..-1]
+  end
+end
+
+class TrivialMatch < Struct.new(:choice)
+  def string_before_match
+    choice
+  end
+
+  def score
+    0
+  end
+
+  def match_string
+    ""
+  end
+
+  def string_after_match
+    ""
+  end
+end
+
+class NonMatch
+  def self.score
+    Float::INFINITY
+  end
+end
+
 class Score
   class << self
     def score(choice, query)
-      return 1.0 if query.length == 0
-      return 0.0 if choice.length == 0
+      if query.empty?
+        return TrivialMatch.new(choice)
+      elsif choice.length == 0
+        return NonMatch
+      end
 
       choice = choice.downcase
       query = query.downcase
 
-      match_length = compute_match_length(choice, query.each_char.to_a)
-      return 0.0 unless match_length
+      indexes = compute_match_length(choice, query.each_char.to_a)
+      return NonMatch unless indexes
+      first_index, last_index = indexes
+      match_length = last_index - first_index + 1
 
       # Penalize longer matches.
       score = query.length.to_f / match_length.to_f
 
       # Normalize vs. the length of the choice, penalizing longer strings.
-      score / choice.length
+      score = score / choice.length
+
+      Match.new(choice, score, first_index, last_index)
     end
 
     # Find the length of the shortest substring matching the given characters.
@@ -305,11 +360,13 @@ class Score
       first_indexes.map do |first_index|
         last_index = find_end_of_match(string, rest, first_index)
         if last_index
-          last_index - first_index + 1
+          [first_index, last_index]
         else
           nil
         end
-      end.compact.min
+      end.compact.min_by do |first_index, last_index|
+        last_index - first_index
+      end
     end
 
     # Find all occurrences of the character in the string, returning their indexes.
@@ -350,12 +407,18 @@ class Renderer < Struct.new(:search)
   end
 
   def render
-    index, matches = search.index, search.matches
     search_line = "#{match_count_label} > " + search.query
-    unless matches.empty?
-      selection_line = Text[:inverse, matches.fetch(index), :reset]
-      matches = replace_array_element(matches, index, selection_line)
+
+    matches = search.matches[0...search.config.visible_choices]
+
+    matches = matches.map do |match|
+      Text[match.string_before_match,
+           :red,
+           match.match_string,
+           :reset,
+           match.string_after_match]
     end
+
     matches = correct_match_count(matches)
     lines = [search_line] + matches
     Rendered.new(lines, search_line)

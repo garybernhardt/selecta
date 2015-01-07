@@ -25,10 +25,6 @@ ready "scoring" do
     PATHS.each { |choice| Score.score(choice, "x" * 16) }
   end
 
-  go "paths, empty query" do
-    PATHS.each { |choice| Score.score(choice, "") }
-  end
-
   go "paths, trivial query" do
     PATHS.each { |choice| Score.score(choice, "a") }
   end
