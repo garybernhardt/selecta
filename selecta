@@ -290,20 +290,14 @@ end
 
 class Match < Struct.new(:choice, :score, :matching_range)
   def to_text
-    before = choice[0...matching_range.begin]
-    matching = choice[matching_range.begin..matching_range.end]
-    after = choice[(matching_range.end + 1)..-1]
-    Text[before, :red, matching, :reset, after]
-  end
-end
-
-class TrivialMatch < Struct.new(:choice)
-  def score
-    0
-  end
-
-  def to_text
-    Text[choice]
+    if matching_range.none?
+      Text[choice]
+    else
+      before = choice[0...matching_range.begin]
+      matching = choice[matching_range.begin..matching_range.end]
+      after = choice[(matching_range.end + 1)..-1]
+      Text[before, :red, matching, :reset, after]
+    end
   end
 end
 
@@ -316,8 +310,9 @@ end
 class Score
   class << self
     def score(choice, query)
+      empty_range = (0...-1)
       if query.empty?
-        return TrivialMatch.new(choice)
+        return Match.new(choice, 0, empty_range)
       elsif choice.length == 0
         return NonMatch
       end
