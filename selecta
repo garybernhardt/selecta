@@ -172,7 +172,7 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
 end
 
 class Search
-  attr_reader :choices, :index, :query, :config, :matches
+  attr_reader :choices, :index, :query, :config, :matches, :matches_by_query
 
   def initialize(vars)
     @config = vars.fetch(:config)
@@ -180,10 +180,8 @@ class Search
     @index = vars.fetch(:index)
     @query = vars.fetch(:query)
     @done = vars.fetch(:done)
-
-    # Lazily compute matches if there aren't any
-    @matches = vars.fetch(:matches) { compute_matches }
-    @vars = vars.merge(:matches => @matches)
+    @matches_by_query = vars.fetch(:matches_by_query)
+    @vars = vars
   end
 
   def self.blank(config)
@@ -191,7 +189,8 @@ class Search
         :choices => config.choices,
         :index => 0,
         :query => config.initial_search,
-        :done => false)
+        :done => false,
+        :matches_by_query => {}).recompute_matches
   end
 
   # Construct a new Search by merging in a hash of changes.
@@ -240,39 +239,54 @@ class Search
   def append_search_string(string)
     merge(:index => 0,
           :query => @query + string)
+    .recompute_matches
   end
 
   def backspace
     merge(:index => 0,
           :query => @query[0...-1])
+    .recompute_matches
   end
 
   def clear_query
     merge(:index => 0,
           :query => "")
+    .recompute_matches
   end
 
   def delete_word
     merge(:index => 0,
           :query => @query.sub(/[^ ]* *$/, ""))
+    .recompute_matches
   end
 
   def done
     merge(:done => true)
   end
 
-  private
+  def abort
+    merge(:aborted => true)
+  end
 
-  def compute_matches
-    @choices.map do |choice|
-      [choice, Score.score(choice, @query)]
-    end.reject do |choice, match|
-      match.score == Float::INFINITY
-    end.sort_by do |choice, match|
-      # Sort by score. In the case of a tie, favor shorter choice strings.
-      [match.score, match.choice.length]
-    end.map do |choice, match|
-      match
+  def matches
+    @matches_by_query.fetch(@query)
+  end
+
+  def recompute_matches
+    if @matches_by_query.has_key?(@query)
+      self
+    else
+      matches = @choices.map do |choice|
+        [choice, Score.score(choice, @query)]
+      end.reject do |choice, match|
+        match.score == Float::INFINITY
+      end.sort_by do |choice, match|
+        # Sort by score. In the case of a tie, favor shorter choice strings.
+        [match.score, match.choice.length]
+      end.map do |choice, match|
+        match
+      end
+      merge(:matches_by_query => @matches_by_query.merge(@query => matches))
     end
   end
 
