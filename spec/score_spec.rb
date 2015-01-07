@@ -10,10 +10,6 @@ describe "score" do
       expect(score("", "a")).to eq NonMatch
     end
 
-    it "scores 0 when the query is empty" do
-      expect(score("a", "").score).to eq 0
-    end
-
     it "isn't a match when the query is longer than the choice" do
       expect(score("short", "longer")).to eq NonMatch
     end

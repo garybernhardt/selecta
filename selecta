@@ -365,11 +365,7 @@ end
 class Score
   class << self
     def score(choice, query)
-      if query.empty?
-        return Match.trivial(choice)
-      elsif choice.length == 0
-        return NonMatch
-      end
+      return NonMatch if choice.length == 0
 
       choice = choice.downcase
       query = query.downcase
