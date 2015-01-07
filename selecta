@@ -172,7 +172,7 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
 end
 
 class Search
-  attr_reader :choices, :index, :query, :config, :matches, :matches_by_query
+  attr_reader :choices, :index, :query, :config, :match_state
 
   def initialize(vars)
     @config = vars.fetch(:config)
@@ -180,7 +180,7 @@ class Search
     @index = vars.fetch(:index)
     @query = vars.fetch(:query)
     @done = vars.fetch(:done)
-    @matches_by_query = vars.fetch(:matches_by_query)
+    @match_state = vars.fetch(:match_state)
     @vars = vars
   end
 
@@ -190,12 +190,8 @@ class Search
         :index => 0,
         :query => config.initial_search,
         :done => false,
-        :matches_by_query => {"" => build_trivial_matches(config.choices)}
+        :match_state => MatchState.from_choices(config.choices)
        ).recompute_matches
-  end
-
-  def self.build_trivial_matches(choices)
-    choices.map { |choice| Match.trivial(choice) }
   end
 
   # Construct a new Search by merging in a hash of changes.
@@ -274,27 +270,14 @@ class Search
   end
 
   def matches
-    @matches_by_query.fetch(@query)
+    @match_state.for_query(@query)
   end
 
   def recompute_matches
-    if @matches_by_query.has_key?(@query)
-      self
-    else
-      matches = previous_matches.map do |match|
-        choice = match.choice
-        [choice, Score.score(choice, @query)]
-      end.reject do |choice, match|
-        match.score == Float::INFINITY
-      end.sort_by do |choice, match|
-        # Sort by score. In the case of a tie, favor shorter choice strings.
-        [match.score, match.choice.length]
-      end.map do |choice, match|
-        match
-      end
-      merge(:matches_by_query => @matches_by_query.merge(@query => matches))
-    end
+    merge(:match_state => @match_state.update_for_query(@query))
   end
+
+  private
 
   def move_cursor(direction)
     if max_visible_choices > 0
@@ -305,15 +288,54 @@ class Search
     end
   end
 
-  def previous_matches
-    if @matches_by_query.has_key?(@query)
-      @matches_by_query.fetch(@query)
+  class NoSelection; end
+end
+
+class MatchState
+  attr_reader :matches_by_query
+
+  def initialize(matches_by_query)
+    @matches_by_query = matches_by_query
+  end
+
+  def self.from_choices(choices)
+    trivial_matches = choices.map { |choice| Match.trivial(choice) }
+    MatchState.new({"" => trivial_matches})
+  end
+
+  def for_query(query)
+    @matches_by_query.fetch(query)
+  end
+
+  def update_for_query(query)
+    if @matches_by_query.has_key?(query)
+      self
     else
-      merge(:query => @query[0...-1]).previous_matches
+      matches = previous_matches(query).map do |match|
+        choice = match.choice
+        [choice, Score.score(choice, query)]
+      end.reject do |choice, match|
+        match.score == Float::INFINITY
+      end.sort_by do |choice, match|
+        # Sort by score. In the case of a tie, favor shorter choice strings.
+        [match.score, match.choice.length]
+      end.map do |choice, match|
+        match
+      end
+
+      MatchState.new(@matches_by_query.merge(query => matches))
     end
   end
 
-  class NoSelection; end
+  private
+
+  def previous_matches(query)
+    if matches_by_query.has_key?(query)
+      @matches_by_query.fetch(query)
+    else
+      previous_matches(query[0...-1])
+    end
+  end
 end
 
 class Match < Struct.new(:choice, :score, :matching_range)
