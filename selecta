@@ -288,11 +288,11 @@ class Search
   class NoSelection; end
 end
 
-class Match < Struct.new(:choice, :score, :match_start, :match_end)
+class Match < Struct.new(:choice, :score, :matching_range)
   def to_text
-    before = choice[0...match_start]
-    matching = choice[match_start..match_end]
-    after = choice[(match_end + 1)..-1]
+    before = choice[0...matching_range.begin]
+    matching = choice[matching_range.begin..matching_range.end]
+    after = choice[(matching_range.end + 1)..-1]
     Text[before, :red, matching, :reset, after]
   end
 end
@@ -325,10 +325,9 @@ class Score
       choice = choice.downcase
       query = query.downcase
 
-      indexes = compute_match_length(choice, query.each_char.to_a)
-      return NonMatch unless indexes
-      first_index, last_index = indexes
-      match_length = last_index - first_index + 1
+      range = compute_match_range(choice, query.each_char.to_a)
+      return NonMatch unless range
+      match_length = range.count
 
       # Penalize longer matches.
       score = query.length.to_f / match_length.to_f
@@ -336,24 +335,22 @@ class Score
       # Normalize vs. the length of the choice, penalizing longer strings.
       score = score / choice.length
 
-      Match.new(choice, score, first_index, last_index)
+      Match.new(choice, score, range)
     end
 
     # Find the length of the shortest substring matching the given characters.
-    def compute_match_length(string, chars)
+    def compute_match_range(string, chars)
       first_char, *rest = chars
       first_indexes = find_char_in_string(string, first_char)
 
       first_indexes.map do |first_index|
         last_index = find_end_of_match(string, rest, first_index)
         if last_index
-          [first_index, last_index]
+          (first_index..last_index)
         else
           nil
         end
-      end.compact.min_by do |first_index, last_index|
-        last_index - first_index
-      end
+      end.compact.min_by(&:count)
     end
 
     # Find all occurrences of the character in the string, returning their indexes.
