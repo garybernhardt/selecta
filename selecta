@@ -190,7 +190,12 @@ class Search
         :index => 0,
         :query => config.initial_search,
         :done => false,
-        :matches_by_query => {}).recompute_matches
+        :matches_by_query => {"" => build_trivial_matches(config.choices)}
+       ).recompute_matches
+  end
+
+  def self.build_trivial_matches(choices)
+    choices.map { |choice| Match.trivial(choice) }
   end
 
   # Construct a new Search by merging in a hash of changes.
@@ -276,7 +281,8 @@ class Search
     if @matches_by_query.has_key?(@query)
       self
     else
-      matches = @choices.map do |choice|
+      matches = previous_matches.map do |match|
+        choice = match.choice
         [choice, Score.score(choice, @query)]
       end.reject do |choice, match|
         match.score == Float::INFINITY
@@ -299,10 +305,23 @@ class Search
     end
   end
 
+  def previous_matches
+    if @matches_by_query.has_key?(@query)
+      @matches_by_query.fetch(@query)
+    else
+      merge(:query => @query[0...-1]).previous_matches
+    end
+  end
+
   class NoSelection; end
 end
 
 class Match < Struct.new(:choice, :score, :matching_range)
+  def self.trivial(choice)
+    empty_range = (0...0)
+    new(choice, 0, empty_range)
+  end
+
   def to_text
     if matching_range.none?
       Text[choice]
@@ -324,9 +343,8 @@ end
 class Score
   class << self
     def score(choice, query)
-      empty_range = (0...-1)
       if query.empty?
-        return Match.new(choice, 0, empty_range)
+        return Match.trivial(choice)
       elsif choice.length == 0
         return NonMatch
       end
