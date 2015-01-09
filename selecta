@@ -38,9 +38,10 @@ class Selecta
     # the input in case the user did '-h', an invalid option, etc. and we need
     # to terminate.
     options = Configuration.parse_options(ARGV)
+    input_lines = $stdin.readlines
 
     search = Screen.with_screen do |screen, tty|
-      config = Configuration.from_inputs($stdin.readlines, options, screen.height)
+      config = Configuration.from_inputs(input_lines, options, screen.height)
       run_in_screen(config, screen, tty)
     end
 
