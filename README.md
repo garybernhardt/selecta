@@ -32,7 +32,7 @@ Selecta supports these keys:
 - ^U to delete the entire line
 - ^N to select the next match
 - ^P to select the previous match
-- ^C to quit without selecting a match (synonym: ESC, for use in pipelines where you don't want to ^C the whole thing)
+- ^C to quit without selecting a match
 
 ## Theory of Operation
 
