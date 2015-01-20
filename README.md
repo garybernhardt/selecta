@@ -161,7 +161,7 @@ proj() {
 
 #### Insert fuzzy-found paths directly into the shell command line
 
-Whenever you press ^S, your shell will run `find * -type f | selecta` and
+Whenever you press ^S, your shell will run `find . -type f | selecta` and
 append the resulting selected path to the current command line.
 
 Caveats:
@@ -188,7 +188,7 @@ function insert-selecta-path-in-command-line() {
     # Print a newline or we'll clobber the old prompt.
     echo
     # Find the path; abort if the user doesn't select anything.
-    selected_path=$(find * -type f | selecta) || return
+    selected_path=$(find . -type f | selecta) || return
     # Append the selection to the current command buffer.
     eval 'LBUFFER="$LBUFFER$selected_path"'
     # Redraw the prompt since Selecta has drawn several new lines of text.
@@ -206,7 +206,7 @@ Put it in your `~/.bashrc`.
 
 ```shell
 function insert_selecta_path_in_command_line() {
-    READLINE_LINE+=$(find * -type f | selecta)
+    READLINE_LINE+=$(find . -type f | selecta)
 }
 
 bind -x '"\C-s":"insert_selecta_path_in_command_line"'
