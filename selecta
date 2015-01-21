@@ -217,21 +217,11 @@ class Search
   end
 
   def down
-    if max_visible_choices > 0
-      index = (@index + 1) % max_visible_choices
-      merge(:index => index)
-    else
-      self
-    end
+    move_cursor(1)
   end
 
   def up
-    if max_visible_choices > 0
-      index = (@index - 1) % max_visible_choices
-      merge(:index => index)
-    else
-      self
-    end
+    move_cursor(-1)
   end
 
   def max_visible_choices
@@ -273,6 +263,15 @@ class Search
       -score
     end.map do |choice, score|
       choice
+    end
+  end
+
+  def move_cursor(direction)
+    if max_visible_choices > 0
+      index = (@index + direction) % max_visible_choices
+      merge(:index => index)
+    else
+      self
     end
   end
 
