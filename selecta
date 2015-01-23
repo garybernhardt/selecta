@@ -521,16 +521,11 @@ class Screen
   end
 
   def height
-    size[0]
+    tty.winsize[0]
   end
 
   def width
-    size[1]
-  end
-
-  def size
-    height, width = tty.winsize
-    [height, width]
+    tty.winsize[1]
   end
 
   def move_cursor(line, column)
