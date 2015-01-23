@@ -337,10 +337,10 @@ class MatchState
   end
 end
 
-class Match < Struct.new(:original_choice, :choice, :score, :matching_range)
+class Match < Struct.new(:original_choice, :choice, :matching_range)
   def self.trivial(choice)
     empty_range = (0...0)
-    new(choice, choice.downcase, 0, empty_range)
+    new(choice, choice.downcase, empty_range)
   end
 
   def to_text
@@ -354,8 +354,12 @@ class Match < Struct.new(:original_choice, :choice, :score, :matching_range)
     end
   end
 
+  def score
+    matching_range.count
+  end
+
   def refine(new_range)
-    Match.new(original_choice, choice, new_range.count, new_range)
+    Match.new(original_choice, choice, new_range)
   end
 end
 
