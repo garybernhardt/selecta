@@ -489,7 +489,6 @@ class Screen
     @original_stty_state = tty.stty("-g")
   end
 
-
   def configure_tty
     # -echo: terminal doesn't echo typed characters back to the terminal
     # -icanon: terminal doesn't  interpret special characters (like backspace)
