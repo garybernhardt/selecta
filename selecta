@@ -47,7 +47,7 @@ class Selecta
     unless search.selection == Search::NoSelection
       puts search.selection
     end
-  rescue ScreenValidator::NotATTY
+  rescue Screen::NotATTY
     $stderr.puts(
       "Can't get a working TTY. Selecta requires an ANSI-compatible terminal.")
     exit(1)
@@ -473,7 +473,7 @@ class Screen
       screen = self.new(tty)
       screen.configure_tty
       begin
-        ScreenValidator.raise_unless_screen_is_valid(screen.height)
+        raise NotATTY if screen.height == 0
         yield screen, tty
       ensure
         screen.restore_tty
@@ -481,6 +481,8 @@ class Screen
       end
     end
   end
+
+  class NotATTY < RuntimeError; end
 
   attr_reader :tty
 
@@ -597,14 +599,6 @@ class Screen
   def write_bytes(bytes)
     tty.console_file.write(bytes)
   end
-end
-
-class ScreenValidator
-  def self.raise_unless_screen_is_valid(screen_height)
-    raise NotATTY if screen_height == 0
-  end
-
-  class NotATTY < RuntimeError; end
 end
 
 class Text
