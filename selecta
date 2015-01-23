@@ -378,14 +378,18 @@ class Score
       first_char, *rest = chars
       first_indexes = find_char_in_string(string, first_char)
 
-      first_indexes.map do |first_index|
+      best_count = Float::INFINITY
+      best_range = nil
+
+      first_indexes.each do |first_index|
         last_index = find_end_of_match(string, rest, first_index)
-        if last_index
-          (first_index..last_index)
-        else
-          nil
+        if last_index && (count = last_index - first_index) < best_count
+          best_count = count
+          best_range = (first_index..last_index)
         end
-      end.compact.min_by(&:count)
+      end
+
+      best_range
     end
 
     # Find all occurrences of the character in the string, returning their indexes.
