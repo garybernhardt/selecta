@@ -220,7 +220,7 @@ class Search
       if match == NoSelection
         match
       else
-        match.choice
+        match.original_choice
       end
     end
   end
@@ -315,7 +315,7 @@ class MatchState
         choice = match.choice
         range = Score.score(choice, query)
         if range
-          [choice, Match.new(choice, range.count, range)]
+          [choice, match.refine(range)]
         else
           nil
         end
@@ -341,10 +341,10 @@ class MatchState
   end
 end
 
-class Match < Struct.new(:choice, :score, :matching_range)
+class Match < Struct.new(:original_choice, :choice, :score, :matching_range)
   def self.trivial(choice)
     empty_range = (0...0)
-    new(choice, 0, empty_range)
+    new(choice, choice.downcase, 0, empty_range)
   end
 
   def to_text
@@ -359,7 +359,7 @@ class Match < Struct.new(:choice, :score, :matching_range)
   end
 
   def refine(new_range)
-    Match.new(choice, new_range.count, new_range)
+    Match.new(original_choice, choice, new_range.count, new_range)
   end
 end
 
@@ -374,7 +374,6 @@ class Score
     def score(choice, query)
       return nil if choice.length == 0
 
-      choice = choice.downcase
       query = query.downcase
 
       compute_match_range(choice, query.each_char.to_a)
