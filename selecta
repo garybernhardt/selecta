@@ -316,16 +316,10 @@ class MatchState
       matches = previous_matches(query).map do |match|
         choice = match.choice
         range = Score.score(choice, query)
-        if range
-          [choice, match.refine(range)]
-        else
-          nil
-        end
-      end.compact.sort_by do |choice, match|
+        range ? match.refine(range) : nil
+      end.compact.sort_by do |match|
         # Sort by score. In the case of a tie, favor shorter choice strings.
         [match.score, match.choice.length]
-      end.map do |choice, match|
-        match
       end
 
       MatchState.new(@matches_by_query.merge(query => matches))
