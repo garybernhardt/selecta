@@ -311,6 +311,8 @@ class MatchState
     if @matches_by_query.has_key?(query)
       self
     else
+      query = query.downcase
+
       matches = previous_matches(query).map do |match|
         choice = match.choice
         range = Score.score(choice, query)
@@ -372,11 +374,11 @@ end
 class Score
   class << self
     def score(choice, query)
-      return nil if choice.length == 0
-
-      query = query.downcase
-
-      compute_match_range(choice, query.each_char.to_a)
+      if choice.length > 0
+        compute_match_range(choice, query.each_char.to_a)
+      else
+        nil
+      end
     end
 
     # Find the length of the shortest substring matching the given characters.

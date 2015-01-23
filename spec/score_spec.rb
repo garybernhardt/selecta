@@ -48,9 +48,9 @@ describe "score" do
       expect(score("/! symbols $^", "/!$^")).to be > 0.0
     end
 
-    it "is case insensitive" do
-      expect(score("a", "A")).to eq 1.0
-      expect(score("A", "a")).to eq 1.0
+    it "is case sensitive, because case insensitivity is provided elsewhere" do
+      expect(score("a", "A")).to eq nil
+      expect(score("A", "a")).to eq nil
     end
 
     it "doesn't match when the same letter is repeated in the choice" do
@@ -61,7 +61,7 @@ describe "score" do
   describe "match quality" do
     it "scores lower (better) for better matches" do
       expect(score("selecta.gemspec", "asp")).to be < score("algorithm4_spec.rb", "asp")
-      expect(score("README.md", "em")).to be < score("benchmark.rb", "em")
+      expect(score("readme.md", "em")).to be < score("benchmark.rb", "em")
     end
 
     it "scores shorter matches higher" do
