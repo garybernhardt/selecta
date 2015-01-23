@@ -172,7 +172,7 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
 end
 
 class Search
-  attr_reader :choices, :index, :query, :config, :matches
+  attr_reader :choices, :index, :query, :config, :match_state
 
   def initialize(vars)
     @config = vars.fetch(:config)
@@ -180,10 +180,8 @@ class Search
     @index = vars.fetch(:index)
     @query = vars.fetch(:query)
     @done = vars.fetch(:done)
-
-    # Lazily compute matches if there aren't any
-    @matches = vars.fetch(:matches) { compute_matches }
-    @vars = vars.merge(:matches => @matches)
+    @match_state = vars.fetch(:match_state)
+    @vars = vars
   end
 
   def self.blank(config)
@@ -191,7 +189,9 @@ class Search
         :choices => config.choices,
         :index => 0,
         :query => config.initial_search,
-        :done => false)
+        :done => false,
+        :match_state => MatchState.from_choices(config.choices)
+       ).recompute_matches
   end
 
   # Construct a new Search by merging in a hash of changes.
@@ -240,41 +240,44 @@ class Search
   def append_search_string(string)
     merge(:index => 0,
           :query => @query + string)
+    .recompute_matches
   end
 
   def backspace
     merge(:index => 0,
           :query => @query[0...-1])
+    .recompute_matches
   end
 
   def clear_query
     merge(:index => 0,
           :query => "")
+    .recompute_matches
   end
 
   def delete_word
     merge(:index => 0,
           :query => @query.sub(/[^ ]* *$/, ""))
+    .recompute_matches
   end
 
   def done
     merge(:done => true)
   end
 
-  private
-
-  def compute_matches
-    @choices.map do |choice|
-      [choice, Score.score(choice, @query)]
-    end.reject do |choice, match|
-      match.score == Float::INFINITY
-    end.sort_by do |choice, match|
-      # Sort by score. In the case of a tie, favor shorter choice strings.
-      [match.score, match.choice.length]
-    end.map do |choice, match|
-      match
-    end
+  def abort
+    merge(:aborted => true)
   end
+
+  def matches
+    @match_state.for_query(@query)
+  end
+
+  def recompute_matches
+    merge(:match_state => @match_state.update_for_query(@query))
+  end
+
+  private
 
   def move_cursor(direction)
     if max_visible_choices > 0
@@ -288,7 +291,62 @@ class Search
   class NoSelection; end
 end
 
+class MatchState
+  attr_reader :matches_by_query
+
+  def initialize(matches_by_query)
+    @matches_by_query = matches_by_query
+  end
+
+  def self.from_choices(choices)
+    trivial_matches = choices.map { |choice| Match.trivial(choice) }
+    MatchState.new({"" => trivial_matches})
+  end
+
+  def for_query(query)
+    @matches_by_query.fetch(query)
+  end
+
+  def update_for_query(query)
+    if @matches_by_query.has_key?(query)
+      self
+    else
+      matches = previous_matches(query).map do |match|
+        choice = match.choice
+        range = Score.score(choice, query)
+        if range
+          [choice, Match.new(choice, range.count, range)]
+        else
+          nil
+        end
+      end.compact.sort_by do |choice, match|
+        # Sort by score. In the case of a tie, favor shorter choice strings.
+        [match.score, match.choice.length]
+      end.map do |choice, match|
+        match
+      end
+
+      MatchState.new(@matches_by_query.merge(query => matches))
+    end
+  end
+
+  private
+
+  def previous_matches(query)
+    if matches_by_query.has_key?(query)
+      @matches_by_query.fetch(query)
+    else
+      previous_matches(query[0...-1])
+    end
+  end
+end
+
 class Match < Struct.new(:choice, :score, :matching_range)
+  def self.trivial(choice)
+    empty_range = (0...0)
+    new(choice, 0, empty_range)
+  end
+
   def to_text
     if matching_range.none?
       Text[choice]
@@ -298,6 +356,10 @@ class Match < Struct.new(:choice, :score, :matching_range)
       after = choice[(matching_range.end + 1)..-1]
       Text[before, :red, matching, :reset, after]
     end
+  end
+
+  def refine(new_range)
+    Match.new(choice, new_range.count, new_range)
   end
 end
 
@@ -310,19 +372,12 @@ end
 class Score
   class << self
     def score(choice, query)
-      empty_range = (0...-1)
-      if query.empty?
-        return Match.new(choice, 0, empty_range)
-      elsif choice.length == 0
-        return NonMatch
-      end
+      return nil if choice.length == 0
 
       choice = choice.downcase
       query = query.downcase
 
-      range = compute_match_range(choice, query.each_char.to_a)
-      return NonMatch unless range
-      Match.new(choice, range.count, range)
+      compute_match_range(choice, query.each_char.to_a)
     end
 
     # Find the length of the shortest substring matching the given characters.
