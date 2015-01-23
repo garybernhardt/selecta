@@ -486,7 +486,7 @@ class Screen
 
   def initialize(tty)
     @tty = tty
-    @ansi = ANSI.new(tty.console_file)
+    @ansi = ANSI.new
     @original_stty_state = tty.stty("-g")
   end
 
@@ -512,11 +512,11 @@ class Screen
   end
 
   def with_cursor_hidden(&block)
-    ansi.hide_cursor!
+    write_bytes(ansi.hide_cursor)
     begin
       block.call
     ensure
-      ansi.show_cursor!
+      write_bytes(ansi.show_cursor)
     end
   end
 
@@ -534,7 +534,7 @@ class Screen
   end
 
   def move_cursor(line, column)
-    ansi.setpos!(line, column)
+    write_bytes(ansi.setpos(line, column))
   end
 
   def write_line(line, text)
@@ -559,31 +559,31 @@ class Screen
 
   def write_text_object(line, column, text)
     # Blank the line before drawing to it
-    ansi.setpos!(line, 0)
-    ansi.addstr!(" " * width)
+    write_bytes(ansi.setpos(line, 0))
+    write_bytes(" " * width)
 
     text.components.each do |component|
       if component.is_a? String
-        ansi.setpos!(line, column)
+        write_bytes(ansi.setpos(line, column))
         # Don't draw off the edge of the screen.
         #   - width - 1 is the last column we have (zero-indexed)
         #   - subtract the current column from that to get the number of
         #   columns we have left.
         chars_to_draw = [0, width - 1 - column].max
         component = expand_tabs(component)[0..chars_to_draw]
-        ansi.addstr!(component)
+        write_bytes(component)
         column += component.length
       elsif component == :inverse
-        ansi.inverse!
+        write_bytes(ansi.inverse)
       elsif component == :reset
-        ansi.reset!
+        write_bytes(ansi.reset)
       else
         if component =~ /_/
           fg, bg = component.to_s.split(/_/).map(&:to_sym)
         else
           fg, bg = component, :default
         end
-        ansi.color!(fg, bg)
+        write_bytes(ansi.color(fg, bg))
       end
     end
   end
@@ -594,6 +594,10 @@ class Screen
     string.gsub(/([^\t\n]*)\t/) do
       $1 + " " * (tab_width - ($1.size % tab_width))
     end
+  end
+
+  def write_bytes(bytes)
+    tty.console_file.write(bytes)
   end
 end
 
@@ -628,12 +632,6 @@ end
 class ANSI
   ESC = 27.chr
 
-  attr_reader :file
-
-  def initialize(file)
-    @file = file
-  end
-
   def escape(sequence)
     ESC + "[" + sequence
   end
@@ -652,10 +650,6 @@ class ANSI
 
   def setpos(line, column)
     escape "#{line + 1};#{column + 1}H"
-  end
-
-  def addstr(str)
-    str
   end
 
   def color(fg, bg=:default)
@@ -692,19 +686,6 @@ class ANSI
 
   def reset
     escape("0m")
-  end
-
-  def clear!(*args); write clear(*args); end
-  def setpos!(*args); write setpos(*args); end
-  def addstr!(*args); write addstr(*args); end
-  def color!(*args); write color(*args); end
-  def inverse!(*args); write inverse(*args); end
-  def reset!(*args); write reset(*args); end
-  def hide_cursor!(*args); write hide_cursor(*args); end
-  def show_cursor!(*args); write show_cursor(*args); end
-
-  def write(bytes)
-    file.write(bytes)
   end
 end
 
