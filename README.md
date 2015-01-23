@@ -111,6 +111,18 @@ endfunction
 nnoremap <leader>f :call SelectaCommand("find * -type f", "", ":e")<cr>
 ```
 
+You can also use selecta to open buffers. Just add the following to your .vimrc, as well as the `SelectaCommand` function above:
+
+```vimscript
+function! SelectaBuffer()
+  let buffers = map(range(1, bufnr("$")), 'bufname(bufnr(v:val))')
+  call SelectaCommand('echo "' . join(buffers, "\n") . '"', "", ":b")
+endfunction
+
+" Fuzzy select a buffer. Open the selected buffer with :b.
+nnoremap <leader>b :call SelectaBuffer()<cr>
+```
+
 ## Usage Examples
 
 #### Check out a git branch
