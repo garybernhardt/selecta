@@ -111,7 +111,7 @@ endfunction
 nnoremap <leader>f :call SelectaCommand("find * -type f", "", ":e")<cr>
 ```
 
-You can also use selecta to open buffers. Just add the following to your .vimrc:
+You can also use selecta to open buffers. Just add the following to your .vimrc, as well as the `SelectaCommand` function above:
 
 ```vimscript
 function! SelectaBuffer()
