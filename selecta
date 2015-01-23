@@ -350,7 +350,7 @@ class Match < Struct.new(:original_choice, :choice, :matching_range)
       before = choice[0...matching_range.begin]
       matching = choice[matching_range.begin..matching_range.end]
       after = choice[(matching_range.end + 1)..-1]
-      Text[before, :red, matching, :reset, after]
+      Text[before, :red, matching, :default, after]
     end
   end
 
@@ -430,7 +430,13 @@ class Renderer < Struct.new(:search)
     search_line = "#{match_count_label} > " + search.query
 
     matches = search.matches[0...search.config.visible_choices]
-    matches = matches.map(&:to_text)
+    matches = matches.each_with_index.map do |match, index|
+      if index == search.index
+        Text[:inverse] + match.to_text + Text[:reset]
+      else
+        match.to_text
+      end
+    end
     matches = correct_match_count(matches)
     lines = [search_line] + matches
     Rendered.new(lines, search_line)
