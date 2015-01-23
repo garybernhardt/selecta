@@ -365,12 +365,6 @@ class Match < Struct.new(:original_choice, :choice, :score, :matching_range)
   end
 end
 
-class NonMatch
-  def self.score
-    Float::INFINITY
-  end
-end
-
 class Score
   class << self
     def score(choice, query)
