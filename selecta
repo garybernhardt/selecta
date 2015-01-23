@@ -376,12 +376,11 @@ class Score
     # Find the length of the shortest substring matching the given characters.
     def compute_match_range(string, chars)
       first_char, *rest = chars
-      first_indexes = find_char_in_string(string, first_char)
 
       best_count = Float::INFINITY
       best_range = nil
 
-      first_indexes.each do |first_index|
+      each_index_of_char_in_string(string, first_char) do |first_index|
         last_index = find_end_of_match(string, rest, first_index)
         if last_index && (count = last_index - first_index) < best_count
           best_count = count
@@ -393,17 +392,15 @@ class Score
     end
 
     # Find all occurrences of the character in the string, returning their indexes.
-    def find_char_in_string(string, char)
+    def each_index_of_char_in_string(string, char)
       index = 0
-      indexes = []
       while index
         index = string.index(char, index)
         if index
-          indexes << index
+          yield index
           index += 1
         end
       end
-      indexes
     end
 
     # Find each of the characters in the string, moving strictly left to right.
