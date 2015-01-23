@@ -220,7 +220,7 @@ class Search
       if match == NoSelection
         match
       else
-        match.choice
+        match.original_choice
       end
     end
   end
@@ -311,19 +311,15 @@ class MatchState
     if @matches_by_query.has_key?(query)
       self
     else
+      query = query.downcase
+
       matches = previous_matches(query).map do |match|
         choice = match.choice
         range = Score.score(choice, query)
-        if range
-          [choice, Match.new(choice, range.count, range)]
-        else
-          nil
-        end
-      end.compact.sort_by do |choice, match|
+        range ? match.refine(range) : nil
+      end.compact.sort_by do |match|
         # Sort by score. In the case of a tie, favor shorter choice strings.
         [match.score, match.choice.length]
-      end.map do |choice, match|
-        match
       end
 
       MatchState.new(@matches_by_query.merge(query => matches))
@@ -341,10 +337,10 @@ class MatchState
   end
 end
 
-class Match < Struct.new(:choice, :score, :matching_range)
+class Match < Struct.new(:original_choice, :choice, :matching_range)
   def self.trivial(choice)
     empty_range = (0...0)
-    new(choice, 0, empty_range)
+    new(choice, choice.downcase, empty_range)
   end
 
   def to_text
@@ -358,55 +354,53 @@ class Match < Struct.new(:choice, :score, :matching_range)
     end
   end
 
-  def refine(new_range)
-    Match.new(choice, new_range.count, new_range)
+  def score
+    matching_range.count
   end
-end
 
-class NonMatch
-  def self.score
-    Float::INFINITY
+  def refine(new_range)
+    Match.new(original_choice, choice, new_range)
   end
 end
 
 class Score
   class << self
     def score(choice, query)
-      return nil if choice.length == 0
-
-      choice = choice.downcase
-      query = query.downcase
-
-      compute_match_range(choice, query.each_char.to_a)
+      if choice.length > 0
+        compute_match_range(choice, query.each_char.to_a)
+      else
+        nil
+      end
     end
 
     # Find the length of the shortest substring matching the given characters.
     def compute_match_range(string, chars)
       first_char, *rest = chars
-      first_indexes = find_char_in_string(string, first_char)
 
-      first_indexes.map do |first_index|
+      best_count = Float::INFINITY
+      best_range = nil
+
+      each_index_of_char_in_string(string, first_char) do |first_index|
         last_index = find_end_of_match(string, rest, first_index)
-        if last_index
-          (first_index..last_index)
-        else
-          nil
+        if last_index && (count = last_index - first_index) < best_count
+          best_count = count
+          best_range = (first_index..last_index)
         end
-      end.compact.min_by(&:count)
+      end
+
+      best_range
     end
 
     # Find all occurrences of the character in the string, returning their indexes.
-    def find_char_in_string(string, char)
+    def each_index_of_char_in_string(string, char)
       index = 0
-      indexes = []
       while index
         index = string.index(char, index)
         if index
-          indexes << index
+          yield index
           index += 1
         end
       end
-      indexes
     end
 
     # Find each of the characters in the string, moving strictly left to right.
