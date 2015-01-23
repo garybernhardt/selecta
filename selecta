@@ -270,7 +270,7 @@ class Search
       match.score == Float::INFINITY
     end.sort_by do |choice, match|
       # Sort by score. In the case of a tie, favor shorter choice strings.
-      [-match.score, match.choice.length]
+      [match.score, match.choice.length]
     end.map do |choice, match|
       match
     end
@@ -322,15 +322,7 @@ class Score
 
       range = compute_match_range(choice, query.each_char.to_a)
       return NonMatch unless range
-      match_length = range.count
-
-      # Penalize longer matches.
-      score = query.length.to_f / match_length.to_f
-
-      # Normalize vs. the length of the choice, penalizing longer strings.
-      score = score / choice.length
-
-      Match.new(choice, score, range)
+      Match.new(choice, range.count, range)
     end
 
     # Find the length of the shortest substring matching the given characters.
