@@ -313,10 +313,13 @@ class MatchState
     else
       matches = previous_matches(query).map do |match|
         choice = match.choice
-        [choice, Score.score(choice, query)]
-      end.reject do |choice, match|
-        match.score == Float::INFINITY
-      end.sort_by do |choice, match|
+        range = Score.score(choice, query)
+        if range
+          [choice, Match.new(choice, range.count, range)]
+        else
+          nil
+        end
+      end.compact.sort_by do |choice, match|
         # Sort by score. In the case of a tie, favor shorter choice strings.
         [match.score, match.choice.length]
       end.map do |choice, match|
@@ -354,6 +357,10 @@ class Match < Struct.new(:choice, :score, :matching_range)
       Text[before, :red, matching, :reset, after]
     end
   end
+
+  def refine(new_range)
+    Match.new(choice, new_range.count, new_range)
+  end
 end
 
 class NonMatch
@@ -365,14 +372,12 @@ end
 class Score
   class << self
     def score(choice, query)
-      return NonMatch if choice.length == 0
+      return nil if choice.length == 0
 
       choice = choice.downcase
       query = query.downcase
 
-      range = compute_match_range(choice, query.each_char.to_a)
-      return NonMatch unless range
-      Match.new(choice, range.count, range)
+      compute_match_range(choice, query.each_char.to_a)
     end
 
     # Find the length of the shortest substring matching the given characters.
