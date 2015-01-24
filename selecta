@@ -397,9 +397,6 @@ class Score
         if last_index && score < best_score
           best_score = score
           best_range = (first_index..last_index)
-          if best_score == query_chars.length - 1
-            return [best_score, best_range]
-          end
         end
       end
 
