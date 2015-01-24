@@ -313,10 +313,11 @@ class MatchState
       self
     else
       query = query.downcase
+      query_chars = query.chars
 
       matches = previous_matches(query).map do |match|
         choice = match.choice
-        score, range = Score.score(choice, query)
+        score, range = Score.score(choice, query_chars)
         range ? match.refine(score, range) : nil
       end.compact.sort_by do |match|
         # Sort by score. In the case of a tie, favor shorter overall matching
@@ -379,9 +380,9 @@ class Score
       char !~ /[A-Za-z0-9]/
     end.to_set
 
-    def score(choice, query)
+    def score(choice, query_chars)
       if choice.length > 0
-        compute_match_range(choice, query.each_char.to_a)
+        compute_match_range(choice, query_chars)
       else
         [nil, nil]
       end

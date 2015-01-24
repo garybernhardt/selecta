@@ -2,7 +2,7 @@ require_relative "spec_helper"
 
 describe "score" do
   def score(choice, query)
-    score, range = Score.score(choice, query)
+    score, range = Score.score(choice, query.chars)
     if range
       score
     else
