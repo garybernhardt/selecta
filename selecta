@@ -387,7 +387,8 @@ class Score
       best_range = nil
 
       each_index_of_char_in_string(string, first_char) do |first_index|
-        if first_index == 0 || BOUNDARY_CHARS.include?(string[first_index - 1])
+        last_char = string[first_index - 1]
+        if first_index == 0 || BOUNDARY_CHARS.include?(last_char)
           score = BOUNDARY_CHAR_SCORE
         else
           score = SEQUENTIAL_CHAR_SCORE
