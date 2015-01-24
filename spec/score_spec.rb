@@ -27,19 +27,22 @@ describe "score" do
       expect(score("ab", "ac")).to eq nil
     end
 
-    it "has a score when it matches" do
-      expect(score("a", "a")).to be > 0
-      expect(score("ab", "a")).to be > 0
+    it "has a perfect score for a single letter at a word boundary" do
+      expect(score("a", "a")).to eq 1
+      expect(score("ab", "a")).to eq 1
+      expect(score("foo/a", "a")).to eq 1
+    end
+
+    it "has an imperfect score when not starting on a word boundary" do
       expect(score("ba", "a")).to be > 0
       expect(score("bab", "a")).to be > 0
       expect(score("babababab", "aaaa")).to be > 0
     end
 
-    it "scores the length of the match" do
-      expect(score("a", "a")).to eq 1.0
-      expect(score("ab", "ab")).to eq 2
-      expect(score("a long string", "a long string")).to eq "a long string".length
-      expect(score("spec/search_spec.rb", "sear")).to eq "sear".length
+    it "for exact sequential matches, each character after the first is free" do
+      expect(score("ax", "x")).to eq 2
+      expect(score("axya", "xy")).to eq 2
+      expect(score("axyza", "xyz")).to eq 2
     end
   end
 
@@ -74,57 +77,55 @@ describe "score" do
     end
 
     it "finds good matches, even if they appear after worse matches" do
-      expect(score("xayazxayz", "xyz")).to eq 4
+      expect(score("axayazaxayz", "xyz")).to eq score("axayz", "xyz")
     end
 
     it "scores the tighter of two matches, regardless of order" do
-      tight = "12"
-      loose = "1padding2"
-      expect(score(tight + loose, "12")).to eq "12".length
-      expect(score(loose + tight, "12")).to eq "12".length
+      tight = "a12"
+      loose = "a1padding2"
+      expect(score(tight + loose, "12")).to eq score(tight, "12")
+      expect(score(loose + tight, "12")).to eq score(tight, "12")
     end
   end
 
   describe "at word boundaries" do
     it "doesn't score characters before a match at a word boundary" do
-      expect(score("fooxbar", "foobar")).to eq 7
-      expect(score("foo-x-bar", "foobar")).to eq 6
-      expect(score("./spec/score_spec.rb", "specscorespecrb"))
-      .to eq "specscorespecrb".length
-      #expect(score("./spec/score_spec.rb", "scorerb"))
-      #.to eq "scorerb".length
-    end
-
-    it "finds optimal non-boundary matches when boundary matches are present" do
-      # The "xay" matches in both cases because it's shorter than "xaa-aay"
-      # even considering the latter's boundary bonus.
-      expect(score("xayz/x-yaaz", "xyz")).to eq 4
-      expect(score("x-yaaz/xayz", "xyz")).to eq 4
+      expect(score("axa-y", "xy")).to be < score("axay", "xy")
     end
 
     it "finds optimal boundary matches when non-boundary matches are present" do
-      expect(score("x-yaz/xaaaayz", "xyz")).to eq 4
-      expect(score("xaaaayz/x-yaz", "xyz")).to eq 4
+      score1 = score("ax-yaz/axaaaayz", "xyz")
+      score2 = score("axaaaayz/ax-yaz", "xyz")
+      expect(score1).to eq score2
     end
   end
 
   describe "complex matching situations" do
-    xit "favors initials at the beginning of the match" do
-      with_initial = score("app/model/user", "amu")
-      without_initial = score("theapp/model/user", "amu")
-      expect(with_initial).to eq (without_initial - 1)
+    it "favors initials over sequential matches" do
+      with_initial = score("./app/model/user", "amu")
+      without_initial = score("./ast/multiline_argument.rb", "amu")
+      expect(with_initial).to be < (without_initial - 1)
     end
 
-    xit "favors sequential characters to boundary matches" do
-      sequential = score("lib/selecta.rb", "electa")
-      non_sequential = score("lib/selector/average.rb", "electa")
-      expect(sequential).to eq (non_sequential - 1)
+    describe "sequential characters vs. word boundaries" do
+      it "scores word boundaries equal to long sequential matches when starting mid-word" do
+        sequential = score("lib/selecta.rb", "electa")
+        with_word_boundary = score("lib/selector/average.rb", "electa")
+        expect(sequential).to be < with_word_boundary
+      end
+
+      it "scores long sequential equal to word boundaries when starting on a boundary" do
+        sequential = score("lib/selecta.rb", "selecta")
+        with_word_boundary = score("selector/abstract_sequence", "selecta")
+        expect(sequential).to be < with_word_boundary
+      end
     end
 
     it "sometimes doesn't find the best match; the algorithm isn't fully general" do
-      # With an optimal algorithm, this would score 3. It would find the
-      # initial "x", then the "yz" at the end.
-      expect(score("x/yaaaz/yz", "xyz")).to eq 6
+      # With an optimal algorithm, this would find the initial "x", then the
+      # final "yz" at word boundary. Our algorithm isn't optimal, so we get the
+      # "yaaaz" instead of the "yz".
+      expect(score("ax/yaaaz/yz", "xyz")).to eq score("ax/yaaaz", "xyz")
     end
   end
 end

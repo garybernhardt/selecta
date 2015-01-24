@@ -363,6 +363,10 @@ end
 
 class Score
   class << self
+    BOUNDARY_CHAR_SCORE = 1
+    SEQUENTIAL_CHAR_SCORE = 2
+    DEFAULT_CHAR_SCORE = 3
+
     def score(choice, query)
       if choice.length > 0
         compute_match_range(choice, query.each_char.to_a)
@@ -379,7 +383,13 @@ class Score
       best_range = nil
 
       each_index_of_char_in_string(string, first_char) do |first_index|
-        score, last_index = find_end_of_match(string, rest, first_index)
+        if first_index == 0 || BoundaryChars.is_boundary_char?(string[first_index - 1])
+          score = BOUNDARY_CHAR_SCORE
+        else
+          score = SEQUENTIAL_CHAR_SCORE
+        end
+
+        score, last_index = find_end_of_match(string, rest, score, first_index)
         if last_index && score < best_score
           best_score = score
           best_range = (first_index..last_index)
@@ -405,22 +415,37 @@ class Score
     end
 
     # Find each of the characters in the string, moving strictly left to right.
-    def find_end_of_match(string, chars, first_index)
+    def find_end_of_match(string, chars, score, first_index)
       last_index = first_index
 
-      # The score always starts at 1 because one character is consumed before
-      # calling this function.
-      score = 1
+      sequential_count = 0
+      boundary_count = 0
 
       chars.each do |this_char|
         index = string.index(this_char, last_index + 1)
         return [nil, nil] unless index
-        if BoundaryChars.is_boundary_char?(string[index - 1])
-          score += 1
+        if index == last_index + 1
+          score += SEQUENTIAL_CHAR_SCORE
+          sequential_count += 1
+        elsif BoundaryChars.is_boundary_char?(string[index - 1])
+          score += BOUNDARY_CHAR_SCORE
+          boundary_count += 1
         else
-          score += index - last_index
+          score += DEFAULT_CHAR_SCORE * (index - last_index)
         end
         last_index = index
+      end
+
+      # When we see boundary matches but no sequential matches, the user is
+      # probably searching for initials. Privilege this match by making all of
+      # the boundary matches free.
+      if boundary_count > 0 && sequential_count == 0
+        score -= boundary_count * BOUNDARY_CHAR_SCORE
+      # When we see sequential matches but no boundary matches, the user is
+      # probably search for an exact string. Privilege this match by
+      # making sequential matches free.
+      elsif sequential_count > 0 && boundary_count == 0
+        score -= sequential_count * SEQUENTIAL_CHAR_SCORE
       end
       [score, last_index]
     end
