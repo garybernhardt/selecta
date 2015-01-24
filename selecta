@@ -363,9 +363,21 @@ end
 
 class Score
   class << self
+    # Generally, we like boundaries the best, then sequential matching
+    # characters, then anything else.
     BOUNDARY_CHAR_SCORE = 1
     SEQUENTIAL_CHAR_SCORE = 2
     DEFAULT_CHAR_SCORE = 3
+
+    # A word boundary character is any ASCII character that's not alphanumeric.
+    # This isn't strictly correct: characters like ZERO WIDTH NON-JOINER,
+    # non-Latin punctuation, etc. will be incorrectly treated as non-boundary
+    # characters. This is necessary for performance: even building a Set of
+    # boundary characters based only on the input text is prohibitively slow (2-3
+    # seconds for 80,000 input paths on a 2014 MacBook Pro).
+    BOUNDARY_CHARS = (0..127).map(&:chr).select do |char|
+      char !~ /[A-Za-z0-9]/
+    end.to_set
 
     def score(choice, query)
       if choice.length > 0
@@ -383,7 +395,7 @@ class Score
       best_range = nil
 
       each_index_of_char_in_string(string, first_char) do |first_index|
-        if first_index == 0 || BoundaryChars.is_boundary_char?(string[first_index - 1])
+        if first_index == 0 || BOUNDARY_CHARS.include?(string[first_index - 1])
           score = BOUNDARY_CHAR_SCORE
         else
           score = SEQUENTIAL_CHAR_SCORE
@@ -427,7 +439,7 @@ class Score
         if index == last_index + 1
           score += SEQUENTIAL_CHAR_SCORE
           sequential_count += 1
-        elsif BoundaryChars.is_boundary_char?(string[index - 1])
+        elsif BOUNDARY_CHARS.include?(string[index - 1])
           score += BOUNDARY_CHAR_SCORE
           boundary_count += 1
         else
@@ -449,22 +461,6 @@ class Score
       end
       [score, last_index]
     end
-  end
-end
-
-class BoundaryChars
-  # A word boundary character is any ASCII character that's not alphanumeric.
-  # This isn't strictly correct: characters like ZERO WIDTH NON-JOINER,
-  # non-Latin punctuation, etc. will be incorrectly treated as non-boundary
-  # characters. This is necessary for performance: even building a Set of
-  # boundary characters based only on the input text is prohibitively slow (2-3
-  # seconds for 80,000 input paths on a 2014 MacBook Pro).
-  BOUNDARY_CHARS = (0..127).map(&:chr).select do |char|
-    char !~ /[A-Za-z0-9]/
-  end.to_set
-
-  def self.is_boundary_char?(char)
-    BOUNDARY_CHARS.include?(char)
   end
 end
 
