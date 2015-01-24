@@ -300,7 +300,7 @@ class MatchState
   end
 
   def self.from_choices(choices)
-    trivial_matches = choices.map { |choice| Match.trivial(choice) }
+    trivial_matches = choices.reject(&:empty?).map { |choice| Match.trivial(choice) }
     MatchState.new({"" => trivial_matches})
   end
 
@@ -380,17 +380,8 @@ class Score
       char !~ /[A-Za-z0-9]/
     end.to_set
 
-    def score(choice, query_chars)
-      if choice.length > 0
-        compute_match_range(choice, query_chars)
-      else
-        [nil, nil]
-      end
-    end
-
-    # Find the length of the shortest substring matching the given characters.
-    def compute_match_range(string, chars)
-      first_char, *rest = chars
+    def score(string, query_chars)
+      first_char, *rest = query_chars
 
       best_score = Float::INFINITY
       best_range = nil
@@ -406,7 +397,7 @@ class Score
         if last_index && score < best_score
           best_score = score
           best_range = (first_index..last_index)
-          if best_score == chars.length - 1
+          if best_score == query_chars.length - 1
             return [best_score, best_range]
           end
         end
