@@ -19,6 +19,7 @@ end
 
 require "optparse"
 require "io/console"
+require "set"
 
 KEY_CTRL_N = ?\C-n
 KEY_CTRL_P = ?\C-p
@@ -315,11 +316,12 @@ class MatchState
 
       matches = previous_matches(query).map do |match|
         choice = match.choice
-        range = Score.score(choice, query)
-        range ? match.refine(range) : nil
+        score, range = Score.score(choice, query)
+        range ? match.refine(score, range) : nil
       end.compact.sort_by do |match|
-        # Sort by score. In the case of a tie, favor shorter choice strings.
-        [match.score, match.choice.length]
+        # Sort by score. In the case of a tie, favor shorter overall matching
+        # substrings. If that's a tie, favor shorter overall strings.
+        [match.score, match.matching_range.count, match.choice.length]
       end
 
       MatchState.new(@matches_by_query.merge(query => matches))
@@ -337,10 +339,10 @@ class MatchState
   end
 end
 
-class Match < Struct.new(:original_choice, :choice, :matching_range)
+class Match < Struct.new(:original_choice, :choice, :score, :matching_range)
   def self.trivial(choice)
     empty_range = (0...0)
-    new(choice, choice.downcase, empty_range)
+    new(choice, choice.downcase, 0, empty_range)
   end
 
   def to_text
@@ -354,12 +356,8 @@ class Match < Struct.new(:original_choice, :choice, :matching_range)
     end
   end
 
-  def score
-    matching_range.count
-  end
-
-  def refine(new_range)
-    Match.new(original_choice, choice, new_range)
+  def refine(score, range)
+    Match.new(original_choice, choice, score, range)
   end
 end
 
@@ -369,7 +367,7 @@ class Score
       if choice.length > 0
         compute_match_range(choice, query.each_char.to_a)
       else
-        nil
+        [nil, nil]
       end
     end
 
@@ -377,18 +375,21 @@ class Score
     def compute_match_range(string, chars)
       first_char, *rest = chars
 
-      best_count = Float::INFINITY
+      best_score = Float::INFINITY
       best_range = nil
 
       each_index_of_char_in_string(string, first_char) do |first_index|
-        last_index = find_end_of_match(string, rest, first_index)
-        if last_index && (count = last_index - first_index) < best_count
-          best_count = count
+        score, last_index = find_end_of_match(string, rest, first_index)
+        if last_index && score < best_score
+          best_score = score
           best_range = (first_index..last_index)
+          if best_score == chars.length - 1
+            return [best_score, best_range]
+          end
         end
       end
 
-      best_range
+      [best_score, best_range]
     end
 
     # Find all occurrences of the character in the string, returning their indexes.
@@ -406,13 +407,39 @@ class Score
     # Find each of the characters in the string, moving strictly left to right.
     def find_end_of_match(string, chars, first_index)
       last_index = first_index
+
+      # The score always starts at 1 because one character is consumed before
+      # calling this function.
+      score = 1
+
       chars.each do |this_char|
         index = string.index(this_char, last_index + 1)
-        return nil unless index
+        return [nil, nil] unless index
+        if BoundaryChars.is_boundary_char?(string[index - 1])
+          score += 1
+        else
+          score += index - last_index
+        end
         last_index = index
       end
-      last_index
+      [score, last_index]
     end
+  end
+end
+
+class BoundaryChars
+  # A word boundary character is any ASCII character that's not alphanumeric.
+  # This isn't strictly correct: characters like ZERO WIDTH NON-JOINER,
+  # non-Latin punctuation, etc. will be incorrectly treated as non-boundary
+  # characters. This is necessary for performance: even building a Set of
+  # boundary characters based only on the input text is prohibitively slow (2-3
+  # seconds for 80,000 input paths on a 2014 MacBook Pro).
+  BOUNDARY_CHARS = (0..127).map(&:chr).select do |char|
+    char !~ /[A-Za-z0-9]/
+  end.to_set
+
+  def self.is_boundary_char?(char)
+    BOUNDARY_CHARS.include?(char)
   end
 end
 
