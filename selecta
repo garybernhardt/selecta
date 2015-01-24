@@ -383,10 +383,16 @@ class Score
     def score(string, query_chars)
       first_char, *rest = query_chars
 
+      # Keep track of the best match that we've seen. This is uglier than
+      # building a list of matches and then sorting them, but it's faster.
       best_score = Float::INFINITY
       best_range = nil
 
+      # Iterate over each instance of the first query character. E.g., if we're
+      # querying the string "axbx" for "x", we'll start at index 1 and index 3.
       each_index_of_char_in_string(string, first_char) do |first_index|
+        # Score differently depending on whether we're starting on a word
+        # boundary.
         last_char = string[first_index - 1]
         if first_index == 0 || BOUNDARY_CHARS.include?(last_char)
           score = BOUNDARY_CHAR_SCORE
@@ -394,7 +400,10 @@ class Score
           score = SEQUENTIAL_CHAR_SCORE
         end
 
+        # Find the best score starting at this index.
         score, last_index = find_end_of_match(string, rest, score, first_index)
+
+        # Did we do better than we have for the best starting point so far?
         if last_index && score < best_score
           best_score = score
           best_range = (first_index..last_index)
@@ -420,31 +429,45 @@ class Score
     def find_end_of_match(string, chars, score, first_index)
       last_index = first_index
 
+      # Remember the number of sequential and boundary characters for special
+      # scoring later.
       sequential_count = 0
       boundary_count = 0
 
       chars.each do |this_char|
+        # Where's the next occurrence of this character? The optimal algorithm
+        # would consider all instances of query character, but that's slower
+        # than this eager method.
         index = string.index(this_char, last_index + 1)
+
+        # This character doesn't occur in the string, so this can't be a match.
         return [nil, nil] unless index
+
+        # This character immediately follows the previous matched character.
         if index == last_index + 1
           score += SEQUENTIAL_CHAR_SCORE
           sequential_count += 1
+        # This character follows a boundary character.
         elsif BOUNDARY_CHARS.include?(string[index - 1])
           score += BOUNDARY_CHAR_SCORE
           boundary_count += 1
+        # This character isn't special.
         else
           score += DEFAULT_CHAR_SCORE * (index - last_index)
         end
+
         last_index = index
       end
 
+      # Special scoring cases:
+      #
       # When we see boundary matches but no sequential matches, the user is
       # probably searching for initials. Privilege this match by making all of
       # the boundary matches free.
       if boundary_count > 0 && sequential_count == 0
         score -= boundary_count * BOUNDARY_CHAR_SCORE
       # When we see sequential matches but no boundary matches, the user is
-      # probably search for an exact string. Privilege this match by
+      # probably searching for an exact string. Privilege this match by
       # making sequential matches free.
       elsif sequential_count > 0 && boundary_count == 0
         score -= sequential_count * SEQUENTIAL_CHAR_SCORE
