@@ -11,7 +11,7 @@ describe Renderer do
     expect(renderer.render.choices).to eq [
       "3 > ",
       Text["one"],
-      Text["two"],
+      Text[:inverse, "two", :reset],
     ]
   end
 
@@ -33,7 +33,7 @@ describe Renderer do
     renderer = Renderer.new(search)
     expect(renderer.render.choices).to eq [
       "3 > ",
-      Text["one"],
+      Text[:inverse, "one", :reset],
     ]
   end
 
@@ -45,8 +45,8 @@ describe Renderer do
     renderer = Renderer.new(search)
     expect(renderer.render.choices).to eq [
       "2 > o",
-      Text["", :red, "o", :reset, "ne"],
-      Text["tw", :red, "o", :reset, ""],
+      Text[:inverse, "", :red, "o", :default, "ne", :reset],
+      Text["tw", :red, "o", :default, ""],
     ]
   end
 end

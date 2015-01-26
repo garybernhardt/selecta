@@ -47,7 +47,7 @@ class Selecta
     unless search.selection == Search::NoSelection
       puts search.selection
     end
-  rescue ScreenValidator::NotATTY
+  rescue Screen::NotATTY
     $stderr.puts(
       "Can't get a working TTY. Selecta requires an ANSI-compatible terminal.")
     exit(1)
@@ -350,7 +350,7 @@ class Match < Struct.new(:original_choice, :choice, :matching_range)
       before = choice[0...matching_range.begin]
       matching = choice[matching_range.begin..matching_range.end]
       after = choice[(matching_range.end + 1)..-1]
-      Text[before, :red, matching, :reset, after]
+      Text[before, :red, matching, :default, after]
     end
   end
 
@@ -430,7 +430,13 @@ class Renderer < Struct.new(:search)
     search_line = "#{match_count_label} > " + search.query
 
     matches = search.matches[0...search.config.visible_choices]
-    matches = matches.map(&:to_text)
+    matches = matches.each_with_index.map do |match, index|
+      if index == search.index
+        Text[:inverse] + match.to_text + Text[:reset]
+      else
+        match.to_text
+      end
+    end
     matches = correct_match_count(matches)
     lines = [search_line] + matches
     Rendered.new(lines, search_line)
@@ -467,7 +473,7 @@ class Screen
       screen = self.new(tty)
       screen.configure_tty
       begin
-        ScreenValidator.raise_unless_screen_is_valid(screen.height)
+        raise NotATTY if screen.height == 0
         yield screen, tty
       ensure
         screen.restore_tty
@@ -476,14 +482,14 @@ class Screen
     end
   end
 
-  attr_reader :tty, :ansi
+  class NotATTY < RuntimeError; end
+
+  attr_reader :tty
 
   def initialize(tty)
     @tty = tty
-    @ansi = ANSI.new(tty.console_file)
     @original_stty_state = tty.stty("-g")
   end
-
 
   def configure_tty
     # -echo: terminal doesn't echo typed characters back to the terminal
@@ -506,29 +512,24 @@ class Screen
   end
 
   def with_cursor_hidden(&block)
-    ansi.hide_cursor!
+    write_bytes(ANSI.hide_cursor)
     begin
       block.call
     ensure
-      ansi.show_cursor!
+      write_bytes(ANSI.show_cursor)
     end
   end
 
   def height
-    size[0]
+    tty.winsize[0]
   end
 
   def width
-    size[1]
-  end
-
-  def size
-    height, width = tty.winsize
-    [height, width]
+    tty.winsize[1]
   end
 
   def move_cursor(line, column)
-    ansi.setpos!(line, column)
+    write_bytes(ANSI.setpos(line, column))
   end
 
   def write_line(line, text)
@@ -553,31 +554,31 @@ class Screen
 
   def write_text_object(line, column, text)
     # Blank the line before drawing to it
-    ansi.setpos!(line, 0)
-    ansi.addstr!(" " * width)
+    write_bytes(ANSI.setpos(line, 0))
+    write_bytes(" " * width)
 
     text.components.each do |component|
       if component.is_a? String
-        ansi.setpos!(line, column)
+        write_bytes(ANSI.setpos(line, column))
         # Don't draw off the edge of the screen.
         #   - width - 1 is the last column we have (zero-indexed)
         #   - subtract the current column from that to get the number of
         #   columns we have left.
         chars_to_draw = [0, width - 1 - column].max
         component = expand_tabs(component)[0..chars_to_draw]
-        ansi.addstr!(component)
+        write_bytes(component)
         column += component.length
       elsif component == :inverse
-        ansi.inverse!
+        write_bytes(ANSI.inverse)
       elsif component == :reset
-        ansi.reset!
+        write_bytes(ANSI.reset)
       else
         if component =~ /_/
           fg, bg = component.to_s.split(/_/).map(&:to_sym)
         else
           fg, bg = component, :default
         end
-        ansi.color!(fg, bg)
+        write_bytes(ANSI.color(fg, bg))
       end
     end
   end
@@ -589,14 +590,10 @@ class Screen
       $1 + " " * (tab_width - ($1.size % tab_width))
     end
   end
-end
 
-class ScreenValidator
-  def self.raise_unless_screen_is_valid(screen_height)
-    raise NotATTY if screen_height == 0
+  def write_bytes(bytes)
+    tty.console_file.write(bytes)
   end
-
-  class NotATTY < RuntimeError; end
 end
 
 class Text
@@ -622,83 +619,62 @@ end
 class ANSI
   ESC = 27.chr
 
-  attr_reader :file
+  class << self
+    def escape(sequence)
+      ESC + "[" + sequence
+    end
 
-  def initialize(file)
-    @file = file
-  end
+    def clear
+      escape "2J"
+    end
 
-  def escape(sequence)
-    ESC + "[" + sequence
-  end
+    def hide_cursor
+      escape "?25l"
+    end
 
-  def clear
-    escape "2J"
-  end
+    def show_cursor
+      escape "?25h"
+    end
 
-  def hide_cursor
-    escape "?25l"
-  end
+    def setpos(line, column)
+      escape "#{line + 1};#{column + 1}H"
+    end
 
-  def show_cursor
-    escape "?25h"
-  end
+    def color(fg, bg=:default)
+      fg_codes = {
+        :black => 30,
+        :red => 31,
+        :green => 32,
+        :yellow => 33,
+        :blue => 34,
+        :magenta => 35,
+        :cyan => 36,
+        :white => 37,
+        :default => 39,
+      }
+      bg_codes = {
+        :black => 40,
+        :red => 41,
+        :green => 42,
+        :yellow => 43,
+        :blue => 44,
+        :magenta => 45,
+        :cyan => 46,
+        :white => 47,
+        :default => 49,
+      }
+      fg_code = fg_codes.fetch(fg)
+      bg_code = bg_codes.fetch(bg)
+      escape "#{fg_code};#{bg_code}m"
+    end
 
-  def setpos(line, column)
-    escape "#{line + 1};#{column + 1}H"
-  end
+    def inverse
+      escape("7m")
+    end
 
-  def addstr(str)
-    str
-  end
-
-  def color(fg, bg=:default)
-    fg_codes = {
-      :black => 30,
-      :red => 31,
-      :green => 32,
-      :yellow => 33,
-      :blue => 34,
-      :magenta => 35,
-      :cyan => 36,
-      :white => 37,
-      :default => 39,
-    }
-    bg_codes = {
-      :black => 40,
-      :red => 41,
-      :green => 42,
-      :yellow => 43,
-      :blue => 44,
-      :magenta => 45,
-      :cyan => 46,
-      :white => 47,
-      :default => 49,
-    }
-    fg_code = fg_codes.fetch(fg)
-    bg_code = bg_codes.fetch(bg)
-    escape "#{fg_code};#{bg_code}m"
-  end
-
-  def inverse
-    escape("7m")
-  end
-
-  def reset
-    escape("0m")
-  end
-
-  def clear!(*args); write clear(*args); end
-  def setpos!(*args); write setpos(*args); end
-  def addstr!(*args); write addstr(*args); end
-  def color!(*args); write color(*args); end
-  def inverse!(*args); write inverse(*args); end
-  def reset!(*args); write reset(*args); end
-  def hide_cursor!(*args); write hide_cursor(*args); end
-  def show_cursor!(*args); write show_cursor(*args); end
-
-  def write(bytes)
-    file.write(bytes)
+    def reset
+      escape("0m")
+    end
   end
 end
 
