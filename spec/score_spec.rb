@@ -40,9 +40,9 @@ describe "score" do
     end
 
     it "for exact sequential matches, each character after the first is free" do
-      expect(score("ax", "x")).to eq 2
-      expect(score("axya", "xy")).to eq 2
-      expect(score("axyza", "xyz")).to eq 2
+      expect(score("ax", "x")).to eq 1
+      expect(score("axya", "xy")).to eq 1
+      expect(score("axyza", "xyz")).to eq 1
     end
   end
 

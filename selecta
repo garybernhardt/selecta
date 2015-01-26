@@ -364,12 +364,6 @@ end
 
 class Score
   class << self
-    # Generally, we like boundaries the best, then sequential matching
-    # characters, then anything else.
-    BOUNDARY_CHAR_SCORE = 1
-    SEQUENTIAL_CHAR_SCORE = 2
-    DEFAULT_CHAR_SCORE = 3
-
     # A word boundary character is any ASCII character that's not alphanumeric.
     # This isn't strictly correct: characters like ZERO WIDTH NON-JOINER,
     # non-Latin punctuation, etc. will be incorrectly treated as non-boundary
@@ -391,14 +385,7 @@ class Score
       # Iterate over each instance of the first query character. E.g., if we're
       # querying the string "axbx" for "x", we'll start at index 1 and index 3.
       each_index_of_char_in_string(string, first_char) do |first_index|
-        # Score differently depending on whether we're starting on a word
-        # boundary.
-        last_char = string[first_index - 1]
-        if first_index == 0 || BOUNDARY_CHARS.include?(last_char)
-          score = BOUNDARY_CHAR_SCORE
-        else
-          score = SEQUENTIAL_CHAR_SCORE
-        end
+        score = 1
 
         # Find the best score starting at this index.
         score, last_index = find_end_of_match(string, rest, score, first_index)
@@ -445,15 +432,15 @@ class Score
 
         # This character immediately follows the previous matched character.
         if index == last_index + 1
-          score += SEQUENTIAL_CHAR_SCORE
+          score += 1
           sequential_count += 1
         # This character follows a boundary character.
         elsif BOUNDARY_CHARS.include?(string[index - 1])
-          score += BOUNDARY_CHAR_SCORE
+          score += 1
           boundary_count += 1
         # This character isn't special.
         else
-          score += DEFAULT_CHAR_SCORE * (index - last_index)
+          score += index - last_index
         end
 
         last_index = index
@@ -465,12 +452,12 @@ class Score
       # probably searching for initials. Privilege this match by making all of
       # the boundary matches free.
       if boundary_count > 0 && sequential_count == 0
-        score -= boundary_count * BOUNDARY_CHAR_SCORE
+        score -= boundary_count
       # When we see sequential matches but no boundary matches, the user is
       # probably searching for an exact string. Privilege this match by
       # making sequential matches free.
       elsif sequential_count > 0 && boundary_count == 0
-        score -= sequential_count * SEQUENTIAL_CHAR_SCORE
+        score -= sequential_count
       end
       [score, last_index]
     end
