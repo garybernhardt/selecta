@@ -416,10 +416,8 @@ class Score
     def find_end_of_match(string, chars, score, first_index)
       last_index = first_index
 
-      # Remember the number of sequential and boundary characters for special
-      # scoring later.
-      sequential_count = 0
-      boundary_count = 0
+      # Remember the type of the last character match for special scoring.
+      last_type = nil
 
       chars.each do |this_char|
         # Where's the next occurrence of this character? The optimal algorithm
@@ -430,35 +428,29 @@ class Score
         # This character doesn't occur in the string, so this can't be a match.
         return [nil, nil] unless index
 
-        # This character immediately follows the previous matched character.
         if index == last_index + 1
-          score += 1
-          sequential_count += 1
+          # This matching character immediately follows the last matching
+          # character. The first two sequential characters score; subsequent
+          # ones don't.
+          if last_type != :sequential
+            last_type = :sequential
+            score += 1
+          end
         # This character follows a boundary character.
         elsif BOUNDARY_CHARS.include?(string[index - 1])
-          score += 1
-          boundary_count += 1
+          if last_type != :boundary
+            last_type = :boundary
+            score += 1
+          end
         # This character isn't special.
         else
+          last_type = :normal
           score += index - last_index
         end
 
         last_index = index
       end
 
-      # Special scoring cases:
-      #
-      # When we see boundary matches but no sequential matches, the user is
-      # probably searching for initials. Privilege this match by making all of
-      # the boundary matches free.
-      if boundary_count > 0 && sequential_count == 0
-        score -= boundary_count
-      # When we see sequential matches but no boundary matches, the user is
-      # probably searching for an exact string. Privilege this match by
-      # making sequential matches free.
-      elsif sequential_count > 0 && boundary_count == 0
-        score -= sequential_count
-      end
       [score, last_index]
     end
   end

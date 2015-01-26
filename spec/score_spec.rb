@@ -39,10 +39,11 @@ describe "score" do
       expect(score("babababab", "aaaa")).to be > 0
     end
 
-    it "for exact sequential matches, each character after the first is free" do
+    it "for exact sequential matches, only the first two contribute to the score" do
       expect(score("ax", "x")).to eq 1
-      expect(score("axya", "xy")).to eq 1
-      expect(score("axyza", "xyz")).to eq 1
+      expect(score("axya", "xy")).to eq 2
+      expect(score("axyza", "xyz")).to eq 2
+      expect(score("ax/yzwa", "xyzw")).to eq 3
     end
   end
 
@@ -104,7 +105,7 @@ describe "score" do
     it "favors initials over sequential matches" do
       with_initial = score("./app/model/user", "amu")
       without_initial = score("./ast/multiline_argument.rb", "amu")
-      expect(with_initial).to be < (without_initial - 1)
+      expect(with_initial).to be < without_initial
     end
 
     describe "sequential characters vs. word boundaries" do
@@ -126,6 +127,10 @@ describe "score" do
       # final "yz" at word boundary. Our algorithm isn't optimal, so we get the
       # "yaaaz" instead of the "yz".
       expect(score("ax/yaaaz/yz", "xyz")).to eq score("ax/yaaaz", "xyz")
+    end
+
+    it "finds matching strings even when the search characters are interleaved" do
+      expect(score("axbxc/bx", "abc")).not_to be_nil
     end
   end
 end
