@@ -3,3 +3,5 @@
 /.ruby-version
 /.ruby-gemset
 /.gem
+/score/score
+/score/libscore.so
