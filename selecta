@@ -377,7 +377,7 @@ class Score
     # boundary characters based only on the input text is prohibitively slow (2-3
     # seconds for 80,000 input paths on a 2014 MacBook Pro).
     BOUNDARY_CHARS = (0..127).map(&:chr).select do |char|
-      char !~ /[A-Za-z0-9]/
+      char !~ /[A-Za-z0-9_]/
     end.to_set
 
     def score(string, query_chars)
