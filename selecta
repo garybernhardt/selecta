@@ -217,7 +217,7 @@ class Search
     if @aborted
       NoSelection
     else
-      match = matches.fetch(@index) { NoSelection }
+      match = best_matches.fetch(@index) { NoSelection }
       if match == NoSelection
         match
       else
@@ -235,7 +235,7 @@ class Search
   end
 
   def max_visible_choices
-    [@config.visible_choices, matches.count].min
+    [@config.visible_choices, all_matches.count].min
   end
 
   def append_search_string(string)
@@ -270,8 +270,13 @@ class Search
     merge(:aborted => true)
   end
 
-  def matches
+  def all_matches
     @match_state.for_query(@query)
+  end
+
+  def best_matches
+    MatchOrdering.order_matches(all_matches,
+                                self.max_visible_choices)
   end
 
   def recompute_matches
@@ -290,6 +295,32 @@ class Search
   end
 
   class NoSelection; end
+end
+
+class MatchOrdering
+  def self.order_matches(all_matches, count)
+    return [] if all_matches.empty?
+
+    matches = []
+
+    best_score = all_matches.min_by(&:score).score
+
+    # Consider matches, beginning with the best-scoring. A match always ranks
+    # higher than other matches with worse scores. However, the ranking between
+    # matches of the same score depends on other factors, so we always have to
+    # consider all matches of a given score.
+    (best_score..Float::INFINITY).each do |score|
+      matches += all_matches.select { |match| match.score == score }
+      # Stop if we have enough matches.
+      return sub_sort_matches(matches)[0, count] if matches.length >= count
+    end
+  end
+
+  def self.sub_sort_matches(matches)
+    matches.sort_by do |match|
+      [match.score, match.matching_range.count, match.choice.length]
+    end
+  end
 end
 
 class MatchState
@@ -319,11 +350,7 @@ class MatchState
         choice = match.choice
         score, range = Score.score(choice, query_chars)
         range ? match.refine(score, range) : nil
-      end.compact.sort_by do |match|
-        # Sort by score. In the case of a tie, favor shorter overall matching
-        # substrings. If that's a tie, favor shorter overall strings.
-        [match.score, match.matching_range.count, match.choice.length]
-      end
+      end.compact
 
       MatchState.new(@matches_by_query.merge(query => matches))
     end
@@ -469,7 +496,7 @@ class Renderer < Struct.new(:search)
   def render
     search_line = "#{match_count_label} > " + search.query
 
-    matches = search.matches[0...search.config.visible_choices]
+    matches = search.best_matches
     matches = matches.each_with_index.map do |match, index|
       if index == search.index
         Text[:inverse] + match.to_text + Text[:reset]
@@ -485,7 +512,7 @@ class Renderer < Struct.new(:search)
   def match_count_label
     choice_count = search.choices.length
     max_label_width = choice_count.to_s.length
-    match_count = search.matches.count
+    match_count = search.all_matches.count
     match_count.to_s.rjust(max_label_width)
   end
 
