@@ -19,6 +19,7 @@ end
 
 require "optparse"
 require "io/console"
+require "io/wait"
 require "set"
 
 KEY_CTRL_N = ?\C-n
@@ -74,13 +75,36 @@ class Selecta
   def ui_event_loop(search, screen, tty)
     while not search.done?
       Renderer.render!(search, screen)
-      search = handle_key(search, tty.get_char)
+      search = handle_keys(search, tty)
     end
     search
   end
 
+  def handle_keys(search, tty)
+    new_query_chars = ""
+
+    # Read through all of the buffered input characters. Process control
+    # characters immediately. Save any query characters to be processed
+    # together at the end, since there's no reason to process intermediate
+    # results when there are more characters already buffered.
+    tty.get_available_input.chars.each do |char|
+      is_query_char = !!(char =~ /[[:print:]]/)
+      if is_query_char
+        new_query_chars << char
+      else
+        search = handle_control_character(search, char)
+      end
+    end
+
+    if new_query_chars.empty?
+      search
+    else
+      search.append_search_string(new_query_chars)
+    end
+  end
+
   # On each keystroke, generate a new search object
-  def handle_key(search, key)
+  def handle_control_character(search, key)
     case key
 
     when KEY_CTRL_N then search.down
@@ -91,8 +115,6 @@ class Selecta
     when KEY_CTRL_H, KEY_DELETE then search.backspace
 
     when ?\r, KEY_CTRL_J, KEY_CTRL_M then search.done
-
-    when /[[:print:]]/ then search.append_search_string(key.chr)
 
     else search
     end
@@ -755,8 +777,12 @@ class TTY < Struct.new(:console_file)
     block.call(tty)
   end
 
-  def get_char
-    console_file.getc
+  def get_available_input
+    input = console_file.getc
+    while console_file.ready?
+      input += console_file.getc
+    end
+    input
   end
 
   def puts
