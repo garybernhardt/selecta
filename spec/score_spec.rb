@@ -102,24 +102,16 @@ describe "score" do
   end
 
   describe "complex matching situations" do
-    it "favors initials over sequential matches" do
+    it "prefers repeated boundary matches to sequential matches" do
       with_initial = score("./app/model/user", "amu")
       without_initial = score("./ast/multiline_argument.rb", "amu")
       expect(with_initial).to be < without_initial
     end
 
-    describe "sequential characters vs. word boundaries" do
-      it "scores word boundaries equal to long sequential matches when starting mid-word" do
-        sequential = score("lib/selecta.rb", "electa")
-        with_word_boundary = score("lib/selector/average.rb", "electa")
-        expect(sequential).to be < with_word_boundary
-      end
-
-      it "scores long sequential equal to word boundaries when starting on a boundary" do
-        sequential = score("lib/selecta.rb", "selecta")
-        with_word_boundary = score("selector/abstract_sequence", "selecta")
-        expect(sequential).to be < with_word_boundary
-      end
+    it "prefers repeated sequential matches to boundaries" do
+      sequential = score("lib/selecta.rb", "electa")
+      with_word_boundary = score("lib/selector/average.rb", "electa")
+      expect(sequential).to be < with_word_boundary
     end
 
     it "sometimes doesn't find the best match; the algorithm isn't fully general" do
