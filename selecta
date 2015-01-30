@@ -312,7 +312,7 @@ class Search
 
   def recompute_all_matches(previous_matches)
     query = self.query.downcase
-    query_chars = query.chars
+    query_chars = query.chars.to_a
 
     matches = previous_matches.map do |match|
       choice = match.choice
