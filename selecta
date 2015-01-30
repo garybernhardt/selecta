@@ -195,26 +195,31 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
 end
 
 class Search
-  attr_reader :choices, :index, :query, :config, :match_state
+  attr_reader :index, :query, :config, :original_matches, :all_matches, :best_matches
 
   def initialize(vars)
     @config = vars.fetch(:config)
-    @choices = vars.fetch(:choices)
     @index = vars.fetch(:index)
     @query = vars.fetch(:query)
     @done = vars.fetch(:done)
-    @match_state = vars.fetch(:match_state)
+    @original_matches = vars.fetch(:original_matches)
+    @all_matches = vars.fetch(:all_matches)
+    @best_matches = vars.fetch(:best_matches)
     @vars = vars
   end
 
   def self.blank(config)
+    trivial_matches = config.choices.reject(&:empty?).map do |choice|
+      Match.trivial(choice)
+    end
+
     new(:config => config,
-        :choices => config.choices,
         :index => 0,
         :query => config.initial_search,
         :done => false,
-        :match_state => MatchState.from_choices(config.choices)
-       ).recompute_matches
+        :original_matches => trivial_matches,
+        :all_matches => trivial_matches,
+        :best_matches => trivial_matches)
   end
 
   # Construct a new Search by merging in a hash of changes.
@@ -263,7 +268,7 @@ class Search
   def append_search_string(string)
     merge(:index => 0,
           :query => @query + string)
-    .recompute_matches
+    .recompute_matches(all_matches)
   end
 
   def backspace
@@ -292,37 +297,34 @@ class Search
     merge(:aborted => true)
   end
 
-  def all_matches
-    @match_state.for_query(@query)
-  end
-
-  def best_matches
-    MatchOrdering.order_matches(all_matches,
-                                self.max_visible_choices)
-  end
-
-  def recompute_matches
-    merge(:match_state => @match_state.update_for_query(@query))
+  def recompute_matches(previous_matches=self.original_matches)
+    if self.query.empty?
+      merge(:all_matches => original_matches,
+            :best_matches => original_matches)
+    else
+      all_matches = recompute_all_matches(previous_matches)
+      best_matches = recompute_best_matches(all_matches)
+      merge(:all_matches => all_matches, :best_matches => best_matches)
+    end
   end
 
   private
 
-  def move_cursor(direction)
-    if max_visible_choices > 0
-      index = (@index + direction) % max_visible_choices
-      merge(:index => index)
-    else
-      self
-    end
+  def recompute_all_matches(previous_matches)
+    query = self.query.downcase
+    query_chars = query.chars
+
+    matches = previous_matches.map do |match|
+      choice = match.choice
+      score, range = Score.score(choice, query_chars)
+      range ? match.refine(score, range) : nil
+    end.compact
   end
 
-  class NoSelection; end
-end
-
-class MatchOrdering
-  def self.order_matches(all_matches, count)
+  def recompute_best_matches(all_matches)
     return [] if all_matches.empty?
 
+    count = [@config.visible_choices, all_matches.count].min
     matches = []
 
     best_score = all_matches.min_by(&:score).score
@@ -338,55 +340,22 @@ class MatchOrdering
     end
   end
 
-  def self.sub_sort_matches(matches)
+  def sub_sort_matches(matches)
     matches.sort_by do |match|
       [match.score, match.matching_range.count, match.choice.length]
     end
   end
-end
 
-class MatchState
-  attr_reader :matches_by_query
-
-  def initialize(matches_by_query)
-    @matches_by_query = matches_by_query
-  end
-
-  def self.from_choices(choices)
-    trivial_matches = choices.reject(&:empty?).map { |choice| Match.trivial(choice) }
-    MatchState.new({"" => trivial_matches})
-  end
-
-  def for_query(query)
-    @matches_by_query.fetch(query)
-  end
-
-  def update_for_query(query)
-    if @matches_by_query.has_key?(query)
+  def move_cursor(direction)
+    if max_visible_choices > 0
+      index = (@index + direction) % max_visible_choices
+      merge(:index => index)
+    else
       self
-    else
-      query = query.downcase
-      query_chars = query.chars
-
-      matches = previous_matches(query).map do |match|
-        choice = match.choice
-        score, range = Score.score(choice, query_chars)
-        range ? match.refine(score, range) : nil
-      end.compact
-
-      MatchState.new(@matches_by_query.merge(query => matches))
     end
   end
 
-  private
-
-  def previous_matches(query)
-    if matches_by_query.has_key?(query)
-      @matches_by_query.fetch(query)
-    else
-      previous_matches(query[0...-1])
-    end
-  end
+  class NoSelection; end
 end
 
 class Match < Struct.new(:original_choice, :choice, :score, :matching_range)
@@ -532,7 +501,7 @@ class Renderer < Struct.new(:search)
   end
 
   def match_count_label
-    choice_count = search.choices.length
+    choice_count = search.original_matches.length
     max_label_width = choice_count.to_s.length
     match_count = search.all_matches.count
     match_count.to_s.rjust(max_label_width)
