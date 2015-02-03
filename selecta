@@ -489,7 +489,7 @@ class Screen
         #   - subtract the current column from that to get the number of
         #   columns we have left.
         chars_to_draw = [0, width - 1 - column].max
-        component = component[0..chars_to_draw]
+        component = expand_tabs(component)[0..chars_to_draw]
         ansi.addstr!(component)
         column += component.length
       elsif component == :inverse
@@ -504,6 +504,14 @@ class Screen
         end
         ansi.color!(fg, bg)
       end
+    end
+  end
+
+  def expand_tabs(string)
+    # Modified from http://markmail.org/message/avdjw34ahxi447qk
+    tab_width = 8
+    string.gsub(/([^\t\n]*)\t/) do
+      $1 + " " * (tab_width - ($1.size % tab_width))
     end
   end
 end
