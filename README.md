@@ -115,7 +115,8 @@ You can also use selecta to open buffers. Just add the following to your .vimrc,
 
 ```vimscript
 function! SelectaBuffer()
-  let buffers = map(range(1, bufnr("$")), 'bufname(v:val)')
+  let bufnrs = filter(range(1, bufnr("$")), 'buflisted(v:val)')
+  let buffers = map(bufnrs, 'bufname(v:val)')
   call SelectaCommand('echo "' . join(buffers, "\n") . '"', "", ":b")
 endfunction
 
