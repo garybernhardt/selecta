@@ -405,7 +405,7 @@ class Screen
 
   def initialize(tty)
     @tty = tty
-    @ansi = ANSI.new(tty.out_file)
+    @ansi = ANSI.new(tty.console_file)
     @original_stty_state = tty.stty("-g")
   end
 
@@ -627,30 +627,26 @@ class ANSI
   end
 end
 
-class TTY < Struct.new(:in_file, :out_file)
+class TTY < Struct.new(:console_file)
   def self.with_tty(&block)
     # Selecta reads data from stdin and writes it to stdout, so we can't draw
     # UI and receive keystrokes through them. Fortunately, all modern
-    # Unix-likes provide /dev/tty, which will be the terminal that the program
-    # is attached to, so we can open that instead.
-    File.open("/dev/tty", "r") do |in_file|
-      File.open("/dev/tty", "w") do |out_file|
-        tty = TTY.new(in_file, out_file)
-        block.call(tty)
-      end
-    end
+    # Unix-likes provide /dev/tty, which IO.console gives us.
+    console_file = IO.console
+    tty = TTY.new(console_file)
+    block.call(tty)
   end
 
   def get_char
-    in_file.getc
+    console_file.getc
   end
 
   def puts
-    out_file.puts
+    console_file.puts
   end
 
   def winsize
-    out_file.winsize
+    console_file.winsize
   end
 
   def stty(args)
