@@ -57,7 +57,10 @@ The ranking algorithm is:
 
 - Select each input string that contains all of the characters in the query.
   They must be in order, but don't have to be sequential. Case is ignored.
-- Shorter matching substrings rank higher.
+- The score is the length of the matching substring. Lower is better.
+- If a character is on a word boundary, it only contributes 1 to the length, rather than the actual number of characters since the previous matching character. Querying "app/models" for "am" gives a score of 2, not 5.
+- Bonus for exact queries: when several adjacent characters match sequentially, only the first two score. Querying "search_spec.rb" for "spec" gives a score of 2, not 4.
+- Bonus for acronyms: when several sequential query characters exist on word boundaries, only the first two score. Querying "app/models/user.rb" for "amu" gives a score of 2, not 3.
 
 Some concrete examples:
 - "ct" will match "cat" and "Crate", but not "tack".
