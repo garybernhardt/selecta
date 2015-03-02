@@ -7,11 +7,11 @@ ready "search matching a large list of choices" do
   end
 
   go "filtering with no matches" do
-    @search.append_search_string("zxzxzx").matches
+    @search.append_search_string("zxzxzx").best_matches
   end
 
   go "filtering with many matches" do
-    @search.append_search_string("e").matches
+    @search.append_search_string("e").best_matches
   end
 
   go "progressive query appending, sequential, few matches" do

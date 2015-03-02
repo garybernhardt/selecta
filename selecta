@@ -19,6 +19,7 @@ end
 
 require "optparse"
 require "io/console"
+require "io/wait"
 require "set"
 
 KEY_CTRL_N = ?\C-n
@@ -74,13 +75,36 @@ class Selecta
   def ui_event_loop(search, screen, tty)
     while not search.done?
       Renderer.render!(search, screen)
-      search = handle_key(search, tty.get_char)
+      search = handle_keys(search, tty)
     end
     search
   end
 
+  def handle_keys(search, tty)
+    new_query_chars = ""
+
+    # Read through all of the buffered input characters. Process control
+    # characters immediately. Save any query characters to be processed
+    # together at the end, since there's no reason to process intermediate
+    # results when there are more characters already buffered.
+    tty.get_available_input.chars.each do |char|
+      is_query_char = !!(char =~ /[[:print:]]/)
+      if is_query_char
+        new_query_chars << char
+      else
+        search = handle_control_character(search, char)
+      end
+    end
+
+    if new_query_chars.empty?
+      search
+    else
+      search.append_search_string(new_query_chars)
+    end
+  end
+
   # On each keystroke, generate a new search object
-  def handle_key(search, key)
+  def handle_control_character(search, key)
     case key
 
     when KEY_CTRL_N then search.down
@@ -91,8 +115,6 @@ class Selecta
     when KEY_CTRL_H, KEY_DELETE then search.backspace
 
     when ?\r, KEY_CTRL_J, KEY_CTRL_M then search.done
-
-    when /[[:print:]]/ then search.append_search_string(key.chr)
 
     else search
     end
@@ -173,26 +195,31 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
 end
 
 class Search
-  attr_reader :choices, :index, :query, :config, :match_state
+  attr_reader :index, :query, :config, :original_matches, :all_matches, :best_matches
 
   def initialize(vars)
     @config = vars.fetch(:config)
-    @choices = vars.fetch(:choices)
     @index = vars.fetch(:index)
     @query = vars.fetch(:query)
     @done = vars.fetch(:done)
-    @match_state = vars.fetch(:match_state)
+    @original_matches = vars.fetch(:original_matches)
+    @all_matches = vars.fetch(:all_matches)
+    @best_matches = vars.fetch(:best_matches)
     @vars = vars
   end
 
   def self.blank(config)
+    trivial_matches = config.choices.reject(&:empty?).map do |choice|
+      Match.trivial(choice)
+    end
+
     new(:config => config,
-        :choices => config.choices,
         :index => 0,
         :query => config.initial_search,
         :done => false,
-        :match_state => MatchState.from_choices(config.choices)
-       ).recompute_matches
+        :original_matches => trivial_matches,
+        :all_matches => trivial_matches,
+        :best_matches => trivial_matches)
   end
 
   # Construct a new Search by merging in a hash of changes.
@@ -217,7 +244,7 @@ class Search
     if @aborted
       NoSelection
     else
-      match = matches.fetch(@index) { NoSelection }
+      match = best_matches.fetch(@index) { NoSelection }
       if match == NoSelection
         match
       else
@@ -235,13 +262,13 @@ class Search
   end
 
   def max_visible_choices
-    [@config.visible_choices, matches.count].min
+    [@config.visible_choices, all_matches.count].min
   end
 
   def append_search_string(string)
     merge(:index => 0,
           :query => @query + string)
-    .recompute_matches
+    .recompute_matches(all_matches)
   end
 
   def backspace
@@ -270,15 +297,54 @@ class Search
     merge(:aborted => true)
   end
 
-  def matches
-    @match_state.for_query(@query)
-  end
-
-  def recompute_matches
-    merge(:match_state => @match_state.update_for_query(@query))
+  def recompute_matches(previous_matches=self.original_matches)
+    if self.query.empty?
+      merge(:all_matches => original_matches,
+            :best_matches => original_matches)
+    else
+      all_matches = recompute_all_matches(previous_matches)
+      best_matches = recompute_best_matches(all_matches)
+      merge(:all_matches => all_matches, :best_matches => best_matches)
+    end
   end
 
   private
+
+  def recompute_all_matches(previous_matches)
+    query = self.query.downcase
+    query_chars = query.chars.to_a
+
+    matches = previous_matches.map do |match|
+      choice = match.choice
+      score, range = Score.score(choice, query_chars)
+      range ? match.refine(score, range) : nil
+    end.compact
+  end
+
+  def recompute_best_matches(all_matches)
+    return [] if all_matches.empty?
+
+    count = [@config.visible_choices, all_matches.count].min
+    matches = []
+
+    best_score = all_matches.min_by(&:score).score
+
+    # Consider matches, beginning with the best-scoring. A match always ranks
+    # higher than other matches with worse scores. However, the ranking between
+    # matches of the same score depends on other factors, so we always have to
+    # consider all matches of a given score.
+    (best_score..Float::INFINITY).each do |score|
+      matches += all_matches.select { |match| match.score == score }
+      # Stop if we have enough matches.
+      return sub_sort_matches(matches)[0, count] if matches.length >= count
+    end
+  end
+
+  def sub_sort_matches(matches)
+    matches.sort_by do |match|
+      [match.score, match.matching_range.count, match.choice.length]
+    end
+  end
 
   def move_cursor(direction)
     if max_visible_choices > 0
@@ -290,53 +356,6 @@ class Search
   end
 
   class NoSelection; end
-end
-
-class MatchState
-  attr_reader :matches_by_query
-
-  def initialize(matches_by_query)
-    @matches_by_query = matches_by_query
-  end
-
-  def self.from_choices(choices)
-    trivial_matches = choices.map { |choice| Match.trivial(choice) }
-    MatchState.new({"" => trivial_matches})
-  end
-
-  def for_query(query)
-    @matches_by_query.fetch(query)
-  end
-
-  def update_for_query(query)
-    if @matches_by_query.has_key?(query)
-      self
-    else
-      query = query.downcase
-
-      matches = previous_matches(query).map do |match|
-        choice = match.choice
-        score, range = Score.score(choice, query)
-        range ? match.refine(score, range) : nil
-      end.compact.sort_by do |match|
-        # Sort by score. In the case of a tie, favor shorter overall matching
-        # substrings. If that's a tie, favor shorter overall strings.
-        [match.score, match.matching_range.count, match.choice.length]
-      end
-
-      MatchState.new(@matches_by_query.merge(query => matches))
-    end
-  end
-
-  private
-
-  def previous_matches(query)
-    if matches_by_query.has_key?(query)
-      @matches_by_query.fetch(query)
-    else
-      previous_matches(query[0...-1])
-    end
-  end
 end
 
 class Match < Struct.new(:original_choice, :choice, :score, :matching_range)
@@ -363,39 +382,36 @@ end
 
 class Score
   class << self
-    BOUNDARY_CHAR_SCORE = 1
-    SEQUENTIAL_CHAR_SCORE = 2
-    DEFAULT_CHAR_SCORE = 3
+    # A word boundary character is any ASCII character that's not alphanumeric.
+    # This isn't strictly correct: characters like ZERO WIDTH NON-JOINER,
+    # non-Latin punctuation, etc. will be incorrectly treated as non-boundary
+    # characters. This is necessary for performance: even building a Set of
+    # boundary characters based only on the input text is prohibitively slow (2-3
+    # seconds for 80,000 input paths on a 2014 MacBook Pro).
+    BOUNDARY_CHARS = (0..127).map(&:chr).select do |char|
+      char !~ /[A-Za-z0-9_]/
+    end.to_set
 
-    def score(choice, query)
-      if choice.length > 0
-        compute_match_range(choice, query.each_char.to_a)
-      else
-        [nil, nil]
-      end
-    end
+    def score(string, query_chars)
+      first_char, *rest = query_chars
 
-    # Find the length of the shortest substring matching the given characters.
-    def compute_match_range(string, chars)
-      first_char, *rest = chars
-
+      # Keep track of the best match that we've seen. This is uglier than
+      # building a list of matches and then sorting them, but it's faster.
       best_score = Float::INFINITY
       best_range = nil
 
+      # Iterate over each instance of the first query character. E.g., if we're
+      # querying the string "axbx" for "x", we'll start at index 1 and index 3.
       each_index_of_char_in_string(string, first_char) do |first_index|
-        if first_index == 0 || BoundaryChars.is_boundary_char?(string[first_index - 1])
-          score = BOUNDARY_CHAR_SCORE
-        else
-          score = SEQUENTIAL_CHAR_SCORE
-        end
+        score = 1
 
+        # Find the best score starting at this index.
         score, last_index = find_end_of_match(string, rest, score, first_index)
+
+        # Did we do better than we have for the best starting point so far?
         if last_index && score < best_score
           best_score = score
           best_range = (first_index..last_index)
-          if best_score == chars.length - 1
-            return [best_score, best_range]
-          end
         end
       end
 
@@ -418,53 +434,43 @@ class Score
     def find_end_of_match(string, chars, score, first_index)
       last_index = first_index
 
-      sequential_count = 0
-      boundary_count = 0
+      # Remember the type of the last character match for special scoring.
+      last_type = nil
 
       chars.each do |this_char|
+        # Where's the next occurrence of this character? The optimal algorithm
+        # would consider all instances of query character, but that's slower
+        # than this eager method.
         index = string.index(this_char, last_index + 1)
+
+        # This character doesn't occur in the string, so this can't be a match.
         return [nil, nil] unless index
+
         if index == last_index + 1
-          score += SEQUENTIAL_CHAR_SCORE
-          sequential_count += 1
-        elsif BoundaryChars.is_boundary_char?(string[index - 1])
-          score += BOUNDARY_CHAR_SCORE
-          boundary_count += 1
+          # This matching character immediately follows the last matching
+          # character. The first two sequential characters score; subsequent
+          # ones don't.
+          if last_type != :sequential
+            last_type = :sequential
+            score += 1
+          end
+        # This character follows a boundary character.
+        elsif BOUNDARY_CHARS.include?(string[index - 1])
+          if last_type != :boundary
+            last_type = :boundary
+            score += 1
+          end
+        # This character isn't special.
         else
-          score += DEFAULT_CHAR_SCORE * (index - last_index)
+          last_type = :normal
+          score += index - last_index
         end
+
         last_index = index
       end
 
-      # When we see boundary matches but no sequential matches, the user is
-      # probably searching for initials. Privilege this match by making all of
-      # the boundary matches free.
-      if boundary_count > 0 && sequential_count == 0
-        score -= boundary_count * BOUNDARY_CHAR_SCORE
-      # When we see sequential matches but no boundary matches, the user is
-      # probably search for an exact string. Privilege this match by
-      # making sequential matches free.
-      elsif sequential_count > 0 && boundary_count == 0
-        score -= sequential_count * SEQUENTIAL_CHAR_SCORE
-      end
       [score, last_index]
     end
-  end
-end
-
-class BoundaryChars
-  # A word boundary character is any ASCII character that's not alphanumeric.
-  # This isn't strictly correct: characters like ZERO WIDTH NON-JOINER,
-  # non-Latin punctuation, etc. will be incorrectly treated as non-boundary
-  # characters. This is necessary for performance: even building a Set of
-  # boundary characters based only on the input text is prohibitively slow (2-3
-  # seconds for 80,000 input paths on a 2014 MacBook Pro).
-  BOUNDARY_CHARS = (0..127).map(&:chr).select do |char|
-    char !~ /[A-Za-z0-9]/
-  end.to_set
-
-  def self.is_boundary_char?(char)
-    BOUNDARY_CHARS.include?(char)
   end
 end
 
@@ -481,7 +487,7 @@ class Renderer < Struct.new(:search)
   def render
     search_line = "#{match_count_label} > " + search.query
 
-    matches = search.matches[0...search.config.visible_choices]
+    matches = search.best_matches
     matches = matches.each_with_index.map do |match, index|
       if index == search.index
         Text[:inverse] + match.to_text + Text[:reset]
@@ -495,9 +501,9 @@ class Renderer < Struct.new(:search)
   end
 
   def match_count_label
-    choice_count = search.choices.length
+    choice_count = search.original_matches.length
     max_label_width = choice_count.to_s.length
-    match_count = search.matches.count
+    match_count = search.all_matches.count
     match_count.to_s.rjust(max_label_width)
   end
 
@@ -740,8 +746,12 @@ class TTY < Struct.new(:console_file)
     block.call(tty)
   end
 
-  def get_char
-    console_file.getc
+  def get_available_input
+    input = console_file.getc
+    while console_file.ready?
+      input += console_file.getc
+    end
+    input
   end
 
   def puts
