@@ -100,15 +100,17 @@ describe Search do
       config = Configuration.from_inputs(["a", "b"],
                                          Configuration.default_options)
       search = Search.blank(config)
-      expect(search.append_search_string("a").matches).to eq ["a"]
+      expect(search.append_search_string("a").best_matches.map(&:choice)).to eq ["a"]
     end
 
     it "sorts the choices by score" do
       config = Configuration.from_inputs(["spec/search_spec.rb", "search.rb"],
                                          Configuration.default_options)
       search = Search.blank(config)
-      expect(search.append_search_string("search").matches).to eq ["search.rb",
-                                                                   "spec/search_spec.rb"]
+      expect(search.append_search_string("search").best_matches.map(&:choice)).to eq [
+        "search.rb",
+        "spec/search_spec.rb"
+      ]
     end
   end
 

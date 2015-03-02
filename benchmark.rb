@@ -1,39 +1,5 @@
 require_relative "spec/spec_helper"
 
-ready "scoring" do
-  go "non-matching" do
-    Score.score("x" * 16, "y" * 16)
-  end
-
-  go "matching exactly" do
-    Score.score("x" * 16, "x" * 16)
-  end
-
-  go "matching broken up" do
-    Score.score("xy" * 20, "x" * 10)
-  end
-
-  go "overlapping matches" do
-    Score.score("x" * 40, "x" * 10)
-  end
-
-  go "almost overlapping matches" do
-    Score.score(("x" * 9 + "y") * 4, "x" * 10)
-  end
-
-  go "paths, non-matching" do
-    PATHS.each { |choice| Score.score(choice, "x" * 16) }
-  end
-
-  go "paths, empty query" do
-    PATHS.each { |choice| Score.score(choice, "") }
-  end
-
-  go "paths, trivial query" do
-    PATHS.each { |choice| Score.score(choice, "a") }
-  end
-end
-
 ready "search matching a large list of choices" do
   before do
     config = Configuration.from_inputs(PATHS[0,500], Configuration.default_options)
@@ -41,11 +7,11 @@ ready "search matching a large list of choices" do
   end
 
   go "filtering with no matches" do
-    @search.append_search_string("zxzxzx").matches
+    @search.append_search_string("zxzxzx").best_matches
   end
 
   go "filtering with many matches" do
-    @search.append_search_string("e").matches
+    @search.append_search_string("e").best_matches
   end
 
   go "progressive query appending, sequential, few matches" do

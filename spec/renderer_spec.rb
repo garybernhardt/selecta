@@ -10,7 +10,7 @@ describe Renderer do
     renderer = Renderer.new(search)
     expect(renderer.render.choices).to eq [
       "3 > ",
-      "one",
+      Text["one"],
       Text[:inverse, "two", :reset],
     ]
   end
@@ -34,6 +34,19 @@ describe Renderer do
     expect(renderer.render.choices).to eq [
       "3 > ",
       Text[:inverse, "one", :reset],
+    ]
+  end
+
+  it "highlights the matching text" do
+    config = Configuration.from_inputs(["one", "two", "three"],
+                                       Configuration.default_options,
+                                       3)
+    search = Search.blank(config).append_search_string("o")
+    renderer = Renderer.new(search)
+    expect(renderer.render.choices).to eq [
+      "2 > o",
+      Text[:inverse, "", :red, "o", :default, "ne", :reset],
+      Text["tw", :red, "o", :default, ""],
     ]
   end
 end
