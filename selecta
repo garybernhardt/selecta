@@ -56,7 +56,7 @@ class Selecta
   end
 
   def run_in_screen(config, screen, tty)
-    search = Search.blank(config)
+    search = Search.from_config(config)
 
     # We emit the number of lines we'll use later so we don't clobber whatever
     # was already on the screen.
@@ -208,7 +208,7 @@ class Search
     @vars = vars
   end
 
-  def self.blank(config)
+  def self.from_config(config)
     trivial_matches = config.choices.reject(&:empty?).map do |choice|
       Match.trivial(choice)
     end
