@@ -213,13 +213,19 @@ class Search
       Match.trivial(choice)
     end
 
-    new(:config => config,
-        :index => 0,
-        :query => config.initial_search,
-        :done => false,
-        :original_matches => trivial_matches,
-        :all_matches => trivial_matches,
-        :best_matches => trivial_matches)
+    search = new(:config => config,
+                 :index => 0,
+                 :query => "",
+                 :done => false,
+                 :original_matches => trivial_matches,
+                 :all_matches => trivial_matches,
+                 :best_matches => trivial_matches)
+
+    if config.initial_search.empty?
+      search
+    else
+      search.append_search_string(config.initial_search)
+    end
   end
 
   # Construct a new Search by merging in a hash of changes.

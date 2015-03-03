@@ -52,6 +52,19 @@ describe Search do
       end
     end
 
+    describe "initial search string" do
+      let(:config) { Configuration.new(2, "thr", ["one", "two", "three"]) }
+      let(:search) { Search.from_config(config) }
+
+      it "is remembered" do
+        expect(search.query).to eq "thr"
+      end
+
+      it "filters the results" do
+        expect(search.all_matches.map(&:choice)).to eq ["three"]
+      end
+    end
+
     it "move up the list" do
       expect(search.down.up.selection).to eq "one"
     end
