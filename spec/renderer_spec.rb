@@ -6,7 +6,7 @@ describe Renderer do
                                            3) }
 
   it "renders selected matches" do
-    search = Search.blank(config).down
+    search = Search.from_config(config).down
     renderer = Renderer.new(search)
     expect(renderer.render.choices).to eq [
       "3 > ",
@@ -16,7 +16,7 @@ describe Renderer do
   end
 
   it "renders with no matches" do
-    search = Search.blank(config).append_search_string("z")
+    search = Search.from_config(config).append_search_string("z")
     renderer = Renderer.new(search)
     expect(renderer.render.choices).to eq [
       "0 > z",
@@ -29,7 +29,7 @@ describe Renderer do
     config = Configuration.from_inputs(["One", "two", "three"],
                                        Configuration.default_options,
                                        2)
-    search = Search.blank(config)
+    search = Search.from_config(config)
     renderer = Renderer.new(search)
     expect(renderer.render.choices).to eq [
       "3 > ",
@@ -41,7 +41,7 @@ describe Renderer do
     config = Configuration.from_inputs(["one", "two", "three"],
                                        Configuration.default_options,
                                        3)
-    search = Search.blank(config).append_search_string("o")
+    search = Search.from_config(config).append_search_string("o")
     renderer = Renderer.new(search)
     expect(renderer.render.choices).to eq [
       "2 > o",

@@ -56,7 +56,7 @@ class Selecta
   end
 
   def run_in_screen(config, screen, tty)
-    search = Search.blank(config)
+    search = Search.from_config(config)
 
     # We emit the number of lines we'll use later so we don't clobber whatever
     # was already on the screen.
@@ -208,18 +208,24 @@ class Search
     @vars = vars
   end
 
-  def self.blank(config)
+  def self.from_config(config)
     trivial_matches = config.choices.reject(&:empty?).map do |choice|
       Match.trivial(choice)
     end
 
-    new(:config => config,
-        :index => 0,
-        :query => config.initial_search,
-        :done => false,
-        :original_matches => trivial_matches,
-        :all_matches => trivial_matches,
-        :best_matches => trivial_matches)
+    search = new(:config => config,
+                 :index => 0,
+                 :query => "",
+                 :done => false,
+                 :original_matches => trivial_matches,
+                 :all_matches => trivial_matches,
+                 :best_matches => trivial_matches)
+
+    if config.initial_search.empty?
+      search
+    else
+      search.append_search_string(config.initial_search)
+    end
   end
 
   # Construct a new Search by merging in a hash of changes.

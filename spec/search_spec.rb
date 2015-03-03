@@ -3,7 +3,7 @@ require_relative "spec_helper"
 describe Search do
   let(:config) { Configuration.from_inputs(["one", "two", "three"],
                                            Configuration.default_options) }
-  let(:search) { Search.blank(config) }
+  let(:search) { Search.from_config(config) }
 
   describe "the selected choice" do
     it "selects the first choice by default" do
@@ -25,7 +25,7 @@ describe Search do
 
       it "loops around when reaching the visible choice limit" do
         config = Configuration.new(2, "", ["one", "two", "three"])
-        search = Search.blank(config)
+        search = Search.from_config(config)
         expect(search.down.down.down.selection).to eq "two"
       end
 
@@ -52,6 +52,19 @@ describe Search do
       end
     end
 
+    describe "initial search string" do
+      let(:config) { Configuration.new(2, "thr", ["one", "two", "three"]) }
+      let(:search) { Search.from_config(config) }
+
+      it "is remembered" do
+        expect(search.query).to eq "thr"
+      end
+
+      it "filters the results" do
+        expect(search.all_matches.map(&:choice)).to eq ["three"]
+      end
+    end
+
     it "move up the list" do
       expect(search.down.up.selection).to eq "one"
     end
@@ -65,7 +78,7 @@ describe Search do
   end
 
   describe "backspacing" do
-    let(:search) { Search.blank(config).append_search_string("e") }
+    let(:search) { Search.from_config(config).append_search_string("e") }
 
     it "backspaces over characters" do
       expect(search.query).to eq "e"
@@ -99,14 +112,14 @@ describe Search do
     it "only returns matching choices" do
       config = Configuration.from_inputs(["a", "b"],
                                          Configuration.default_options)
-      search = Search.blank(config)
+      search = Search.from_config(config)
       expect(search.append_search_string("a").best_matches.map(&:choice)).to eq ["a"]
     end
 
     it "sorts the choices by score" do
       config = Configuration.from_inputs(["spec/search_spec.rb", "search.rb"],
                                          Configuration.default_options)
-      search = Search.blank(config)
+      search = Search.from_config(config)
       expect(search.append_search_string("search").best_matches.map(&:choice)).to eq [
         "search.rb",
         "spec/search_spec.rb"
