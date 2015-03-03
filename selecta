@@ -366,11 +366,11 @@ class Match < Struct.new(:original_choice, :choice, :score, :matching_range)
 
   def to_text
     if matching_range.none?
-      Text[choice]
+      Text[original_choice]
     else
-      before = choice[0...matching_range.begin]
-      matching = choice[matching_range.begin..matching_range.end]
-      after = choice[(matching_range.end + 1)..-1]
+      before = original_choice[0...matching_range.begin]
+      matching = original_choice[matching_range.begin..matching_range.end]
+      after = original_choice[(matching_range.end + 1)..-1]
       Text[before, :red, matching, :default, after]
     end
   end
