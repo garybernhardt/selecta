@@ -26,14 +26,14 @@ describe Renderer do
   end
 
   it "respects the screen height" do
-    config = Configuration.from_inputs(["one", "two", "three"],
+    config = Configuration.from_inputs(["One", "two", "three"],
                                        Configuration.default_options,
                                        2)
     search = Search.blank(config)
     renderer = Renderer.new(search)
     expect(renderer.render.choices).to eq [
       "3 > ",
-      Text[:inverse, "one", :reset],
+      Text[:inverse, "One", :reset],
     ]
   end
 
