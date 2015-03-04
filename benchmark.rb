@@ -3,7 +3,7 @@ require_relative "spec/spec_helper"
 ready "search matching a large list of choices" do
   before do
     config = Configuration.from_inputs(PATHS[0,500], Configuration.default_options)
-    @search = Search.blank(config)
+    @search = Search.from_config(config)
   end
 
   go "filtering with no matches" do
