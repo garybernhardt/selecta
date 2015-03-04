@@ -769,7 +769,7 @@ class TTY < Struct.new(:console_file)
   end
 
   def stty(args)
-    command("stty #{args}")
+    command("stty #{args}").strip
   end
 
   private
