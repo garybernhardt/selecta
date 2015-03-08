@@ -22,6 +22,7 @@ require "io/console"
 require "io/wait"
 require "set"
 
+KEY_CTRL_C = ?\C-c
 KEY_CTRL_N = ?\C-n
 KEY_CTRL_P = ?\C-p
 KEY_CTRL_U = ?\C-u
@@ -53,6 +54,27 @@ class Selecta
     $stderr.puts(
       "Can't get a working TTY. Selecta requires an ANSI-compatible terminal.")
     exit(1)
+  rescue Abort
+    # We were aborted via ^C.
+    #
+    # If we didn't mess with the TTY configuration at all, then ^C would send
+    # SIGINT to the entire process group. That would terminate both Selecta and
+    # anything piped into or out of it. Because Selecta puts the terminal in
+    # raw mode, that doesn't happen; instead, we detect the ^C as normal input
+    # and raise Abort, which leads here.
+    #
+    # To make pipelines involving Selecta behave as people expect, we send
+    # SIGINT to our own process group, which should exactly match what termios
+    # would do to us if the terminal weren't in raw mode. "Should!" <- Remove
+    # those scare quotes if ten years pass without this breaking!
+    #
+    # The SIGINT will cause Ruby to raise Interrupt, so we also have to handle
+    # that here.
+    begin
+      Process.kill("INT", -Process.getpgrp)
+    rescue Interrupt
+      exit(1)
+    end
   end
 
   def run_in_screen(config, screen, tty)
@@ -116,9 +138,13 @@ class Selecta
 
     when ?\r, KEY_CTRL_J, KEY_CTRL_M then search.done
 
+    when KEY_CTRL_C then raise Abort
+
     else search
     end
   end
+
+  class Abort < RuntimeError; end
 end
 
 class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
@@ -559,7 +585,7 @@ class Screen
   def configure_tty
     # -echo: terminal doesn't echo typed characters back to the terminal
     # -icanon: terminal doesn't  interpret special characters (like backspace)
-    tty.stty("-echo -icanon")
+    tty.stty("raw -echo -icanon")
   end
 
   def restore_tty
@@ -788,9 +814,5 @@ class TTY < Struct.new(:console_file)
 end
 
 if $0 == __FILE__
-  begin
-    Selecta.new.main
-  rescue Interrupt
-    exit(1)
-  end
+  Selecta.new.main
 end
