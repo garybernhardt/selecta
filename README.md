@@ -211,6 +211,25 @@ zle -N insert-selecta-path-in-command-line
 bindkey "^S" "insert-selecta-path-in-command-line"
 ```
 
+#### Select a process by name and insert its pid into the command line
+
+This is a variant of the previous technique that is useful any time you need to
+find a pid: attaching a debugger, sending a signal, killing a process, and the
+like.
+
+```shell
+function select-pid() {
+    local selected_path
+    echo
+    selected_path=$(ps axww -o pid,user,%cpu,%mem,start,time,command | selecta | sed 's/^ *//' | cut -f1 -d' ')
+    eval 'LBUFFER="$LBUFFER$selected_path "'
+    zle reset-prompt
+}
+
+zle -N select-pid
+bindkey "^Y" "select-pid"
+```
+
 ## FAQ
 
 **Won't this be slow?**
