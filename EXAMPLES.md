@@ -93,3 +93,14 @@ zle -N insert-selecta-path-in-command-line
 # Bind the key to the newly created widget
 bindkey "^S" "insert-selecta-path-in-command-line"
 ```
+
+## ps: Select a process by name and obtain its pid
+
+This is useful any time you need to find a pid: attaching a debugger, sending a
+signal, killing a process, and so forth.
+
+```shell
+alias findpid="ps axww -o pid,user,%cpu,%mem,start,time,command | selecta | sed 's/^ *//' | cut -f1 -d' '"
+```
+
+This alias can be invoked using command substitution, e.g. `gdb $(findpid)`.
