@@ -114,6 +114,11 @@ endfunction
 nnoremap <leader>f :call SelectaCommand("find * -type f", "", ":e")<cr>
 ```
 
+If you would like to ignore files not tracked in git you can use the following command
+```
+nnoremap <leader>p :call SelectaCommand("git ls-files -oc --exclude-standard", "", ":e")<cr>      
+```
+
 ## Usage Examples
 
 For other examples of using Selecta with Vim, git, zsh, etc., see the [examples](https://github.com/garybernhardt/selecta/blob/master/EXAMPLES.md) file.
