@@ -519,7 +519,7 @@ class Renderer < Struct.new(:search)
   def render
     search_line = Text["#{match_count_label} > " + search.query]
 
-    matches = search.best_matches
+    matches = search.best_matches[0, search.config.visible_choices]
     matches = matches.each_with_index.map do |match, index|
       if index == search.index
         Text[:inverse] + match.to_text + Text[:reset]
