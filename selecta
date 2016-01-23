@@ -622,15 +622,7 @@ class Screen
     write_bytes(ANSI.cursor_up(lines))
   end
 
-  def write_line(text)
-    write(Text[text] + Text["\n"])
-  end
-
   def write(text)
-    write_text_object(Text[text])
-  end
-
-  def write_text_object(text)
     # Blank the line before drawing to it
     write_bytes("\r" + " " * width + "\r")
 
