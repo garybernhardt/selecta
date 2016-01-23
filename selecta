@@ -705,6 +705,23 @@ class Text
   def +(other)
     Text[*(components + other.components)]
   end
+
+  def truncate_to_width(width)
+    chars_remaining = width
+
+    # Truncate each string to the number of characters left within our
+    # allowed width. Leave anything else alone. This may result in empty
+    # strings and unused ANSI control codes in the output, but that's fine.
+    components = self.components.map do |component|
+      if component.is_a?(String)
+        component = component[0, chars_remaining]
+        chars_remaining -= component.length
+      end
+      component
+    end
+
+    Text.new(components)
+  end
 end
 
 class ANSI
