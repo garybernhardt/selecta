@@ -502,10 +502,16 @@ class Renderer < Struct.new(:search)
     width = screen.width
 
     screen.with_cursor_hidden do
-      rendered.choices.each do |choice|
-        screen.write_line(choice.truncate_to_width(width))
+      rendered.choices.each_with_index do |choice, index|
+        choice = choice.truncate_to_width(width)
+        is_last_line = (index == rendered.choices.length - 1)
+        choice += Text["\n"] unless is_last_line
+        screen.write(choice)
       end
-      screen.cursor_up(rendered.choices.length)
+
+      # Move back up to the search line and redraw it, which will naturally
+      # leave the cursor at the end of the query.
+      screen.cursor_up(rendered.choices.length - 1)
       screen.write(rendered.search_line.truncate_to_width(width))
     end
   end
