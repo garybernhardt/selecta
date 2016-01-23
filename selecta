@@ -628,12 +628,7 @@ class Screen
 
     text.components.each do |component|
       if component.is_a? String
-        # Don't draw off the edge of the screen.
-        #   - width - 1 is the last column we have (zero-indexed)
-        #   - subtract the current column from that to get the number of
-        #   columns we have left.
-        component = expand_tabs(component)
-        write_bytes(component)
+        write_bytes(expand_tabs(component))
       elsif component == :inverse
         write_bytes(ANSI.inverse)
       elsif component == :reset
