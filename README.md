@@ -130,6 +130,7 @@ On modern machines, finding files is also quite fast: `find` on a 100,000-file d
 
 **What about caching, selecting only certain file types, etc.?**
 
+
 Those are different problems. This is just a simple fuzzy finding user
 interface. It could be combined with caching, etc. I don't use caching myself,
 prefering to keep repos small. Selecta was partially motivated by frustration
