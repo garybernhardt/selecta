@@ -623,8 +623,8 @@ class Screen
   end
 
   def write(text)
-    # Blank the line before drawing to it
-    write_bytes("\r" + " " * width + "\r")
+    write_bytes(ANSI.clear_line)
+    write_bytes("\r")
 
     text.components.each do |component|
       if component.is_a? String
@@ -721,6 +721,10 @@ class ANSI
 
     def cursor_up(lines)
       escape "#{lines}A"
+    end
+
+    def clear_line
+      escape "2K"
     end
 
     def color(fg, bg=:default)
