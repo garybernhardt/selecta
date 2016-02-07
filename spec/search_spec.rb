@@ -24,7 +24,9 @@ describe Search do
       end
 
       it "loops around when reaching the visible choice limit" do
-        config = Configuration.new(2, "", ["one", "two", "three"])
+        # The UI height here is 3, but the prompt line subtracts 1, so only two
+        # choices are shown.
+        config = Configuration.new(3, "", ["one", "two", "three"])
         search = Search.from_config(config)
         expect(search.down.down.down.selection).to eq "two"
       end

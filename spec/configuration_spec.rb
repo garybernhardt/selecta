@@ -31,8 +31,8 @@ describe Configuration do
     describe "height" do
       it "can be specified" do
         config = Configuration.from_inputs(
-          [], Configuration.parse_options(["--height", "77"]))
-        expect(config.height).to eq 77
+          [], Configuration.parse_options(["--height", "7"]))
+        expect(config.height).to eq 7
       end
 
       it "can be full screen" do
