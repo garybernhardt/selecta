@@ -137,19 +137,27 @@ class Selecta
   class Abort < RuntimeError; end
 end
 
-class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
-  def initialize(visible_choices, initialize, choices)
+class Configuration < Struct.new(:height, :initial_search, :choices)
+  def initialize(height, initialize, choices)
     # Constructor is defined to force argument presence; otherwise Struct
     # defaults missing arguments to nil
     super
   end
 
+  def visible_choices
+    height - 1
+  end
+
   def self.from_inputs(choices, options, screen_height=21)
     # Shrink the number of visible choices if the screen is too small
-    visible_choices = [20, screen_height - 1].min
+    if options.fetch(:height) == "full"
+      height = screen_height
+    else
+      height = [options.fetch(:height), screen_height].min
+    end
 
     choices = massage_choices(choices)
-    Configuration.new(visible_choices, options.fetch(:search), choices)
+    Configuration.new(height, options.fetch(:search), choices)
   end
 
   def self.default_options
@@ -157,7 +165,7 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
   end
 
   def self.parse_options(argv)
-    options = {}
+    options = {:search => "", :height => 21}
 
     parser = OptionParser.new do |opts|
       opts.banner = "Usage: #{$PROGRAM_NAME} [options]"
@@ -172,7 +180,17 @@ class Configuration < Struct.new(:visible_choices, :initial_search, :choices)
         exit
       end
 
-      options[:search] = ""
+      opts.on("--height lines", "Specify UI height in lines (including prompt).", "(Use `--height full` for full-screen)") do |height|
+        if height == "full"
+          # "full" is a valid height
+        elsif height.to_i < 2
+          raise OptionParser::InvalidOption.new(%{must be at least 2})
+        else
+          height = height.to_i
+        end
+        options[:height] = height
+      end
+
       opts.on("-s", "--search SEARCH", "Specify an initial search string") do |search|
         options[:search] = search
       end

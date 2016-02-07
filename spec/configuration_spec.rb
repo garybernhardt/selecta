@@ -28,6 +28,22 @@ describe Configuration do
   end
 
   describe "command line options" do
+    describe "height" do
+      it "can be specified" do
+        config = Configuration.from_inputs(
+          [], Configuration.parse_options(["--height", "77"]))
+        expect(config.height).to eq 77
+      end
+
+      it "can be full screen" do
+        config = Configuration.from_inputs(
+          [],
+          Configuration.parse_options(["--height", "full"]),
+          57)
+        expect(config.height).to eq 57
+      end
+    end
+
     describe "search queries" do
       it "can be specified" do
         config = Configuration.from_inputs(
