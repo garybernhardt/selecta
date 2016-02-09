@@ -47,7 +47,7 @@ class Selecta
         config = Configuration.from_inputs(input_lines, options, screen.height)
         run_in_screen(config, screen, tty)
       ensure
-        config.visible_choices.times { puts }
+        config.visible_choices.times { screen.newline }
       end
     end
 
@@ -642,6 +642,10 @@ class Screen
 
   def cursor_up(lines)
     write_bytes(ANSI.cursor_up(lines))
+  end
+
+  def newline
+    write_bytes("\n")
   end
 
   def write(text)
