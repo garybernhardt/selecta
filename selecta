@@ -43,8 +43,12 @@ class Selecta
     input_lines = $stdin.readlines
 
     search = Screen.with_screen do |screen, tty|
-      config = Configuration.from_inputs(input_lines, options, screen.height)
-      run_in_screen(config, screen, tty)
+      begin
+        config = Configuration.from_inputs(input_lines, options, screen.height)
+        run_in_screen(config, screen, tty)
+      ensure
+        config.visible_choices.times { puts }
+      end
     end
 
     unless search.selection == Search::NoSelection
