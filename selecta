@@ -141,8 +141,8 @@ class Selecta
   class Abort < RuntimeError; end
 end
 
-class Configuration < Struct.new(:height, :initial_search, :choices)
-  def initialize(height, initialize, choices)
+class Configuration < Struct.new(:height, :initial_search, :auto, :choices)
+  def initialize(height, initialize, auto, choices)
     # Constructor is defined to force argument presence; otherwise Struct
     # defaults missing arguments to nil
     super
@@ -161,7 +161,7 @@ class Configuration < Struct.new(:height, :initial_search, :choices)
     end
 
     choices = massage_choices(choices)
-    Configuration.new(height, options.fetch(:search), choices)
+    Configuration.new(height, options.fetch(:search), options.fetch(:auto), choices)
   end
 
   def self.default_options
@@ -169,7 +169,7 @@ class Configuration < Struct.new(:height, :initial_search, :choices)
   end
 
   def self.parse_options(argv)
-    options = {:search => "", :height => 21}
+    options = {:search => "", :height => 21, :auto => false}
 
     parser = OptionParser.new do |opts|
       opts.banner = "Usage: #{$PROGRAM_NAME} [options]"
@@ -197,6 +197,10 @@ class Configuration < Struct.new(:height, :initial_search, :choices)
 
       opts.on("-s", "--search SEARCH", "Specify an initial search string") do |search|
         options[:search] = search
+      end
+
+      opts.on("-a", "--auto", "If only one line of text is provided, automatically select it") do |search|
+        options[:auto] = true
       end
     end
 
@@ -259,7 +263,9 @@ class Search
                  :all_matches => trivial_matches,
                  :best_matches => trivial_matches)
 
-    if config.initial_search.empty?
+    if config.auto and config.choices.length == 1
+      search.merge(:done => true)
+    elsif config.initial_search.empty?
       search
     else
       search.append_search_string(config.initial_search)
