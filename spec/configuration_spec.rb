@@ -56,5 +56,18 @@ describe Configuration do
         expect(config.initial_search).to eq("")
       end
     end
+
+    describe "auto matching" do
+      it "can be specified" do
+        config = Configuration.from_inputs(
+          [], Configuration.parse_options(["-a"]))
+        expect(config.auto).to eq true
+      end
+
+      it "defaults to false" do
+        config = Configuration.from_inputs([], Configuration.default_options)
+        expect(config.auto).to eq false
+      end
+    end
   end
 end

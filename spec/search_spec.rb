@@ -26,7 +26,7 @@ describe Search do
       it "loops around when reaching the visible choice limit" do
         # The UI height here is 3, but the prompt line subtracts 1, so only two
         # choices are shown.
-        config = Configuration.new(3, "", ["one", "two", "three"])
+        config = Configuration.new(3, "", false, ["one", "two", "three"])
         search = Search.from_config(config)
         expect(search.down.down.down.selection).to eq "two"
       end
@@ -55,7 +55,7 @@ describe Search do
     end
 
     describe "initial search string" do
-      let(:config) { Configuration.new(2, "thr", ["one", "two", "three"]) }
+      let(:config) { Configuration.new(2, "thr", false, ["one", "two", "three"]) }
       let(:search) { Search.from_config(config) }
 
       it "is remembered" do
@@ -132,5 +132,33 @@ describe Search do
   it "knows when it's done" do
     expect(search.done?).to eq false
     expect(search.done.done?).to eq true
+  end
+
+  describe "auto(matic) selection when there is just single choice" do
+    let(:oneline)      { ["first"] }
+    describe "when the automatic option is on" do
+      let(:autoconfig) { Configuration.from_inputs(oneline,
+                                                   Configuration.parse_options(['--auto'])) }
+      let(:autosearch) { Search.from_config(autoconfig) }
+
+      it "finds that the search is already done" do
+        expect(autosearch.done?).to be true
+      end
+
+      it "returns the first line as a match" do
+        expect(autosearch.selection).to eq oneline.first
+      end
+    end
+
+    describe "when the automatic option is off" do
+      let(:twolines)   { ["first", "second"] }
+      let(:autoconfig) { Configuration.from_inputs(twolines,
+                                                   Configuration.parse_options(['--auto'])) }
+      let(:autosearch) { Search.from_config(autoconfig) }
+
+      it "finds that the search is still going" do
+        expect(autosearch.done?).to be false
+      end
+    end
   end
 end
