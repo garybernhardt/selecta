@@ -10,6 +10,24 @@ describe "score" do
     end
   end
 
+  def score(choice, query)
+    score, range = Score.score(choice, query.chars.to_a)
+    if range
+      score
+    else
+      nil
+    end
+  end
+
+  def score(choice, query)
+    score, range = Score.score(choice, query.chars.to_a)
+    if range
+      score
+    else
+      nil
+    end
+  end
+
   describe "basic matching" do
     it "isn't a match when the choice is empty" do
       expect(score("", "a")).to eq nil
