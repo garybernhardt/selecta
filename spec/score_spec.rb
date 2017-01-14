@@ -10,6 +10,10 @@ describe "score" do
     end
   end
 
+  def foo(bar,baz)
+    bar+baz
+  end
+
   describe "basic matching" do
     it "isn't a match when the choice is empty" do
       expect(score("", "a")).to eq nil

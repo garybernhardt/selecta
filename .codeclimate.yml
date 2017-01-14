@@ -1,0 +1,6 @@
+engines:
+  reek:
+    enabled: true
+ratings:
+  paths:
+  - "**.rb"
