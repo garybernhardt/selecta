@@ -119,6 +119,19 @@ nnoremap <leader>f :call SelectaCommand("find * -type f", "", ":e")<cr>
 For other examples of using Selecta with Vim, git, zsh, etc., see the [examples](https://github.com/garybernhardt/selecta/blob/master/EXAMPLES.md) file.
 It has pre-built configurations for many use cases.
 
+### Have a Ctrl-p like system to open files on vim from the ZSH CLI
+
+```zsh
+bindkey -s "^P" "vim \$\(find \* -type f | selecta\)\n"
+```
+
+Or, if you have the_silver_searcher installed, you can avoid looking into files you are
+ignoring on your `.gitignore`:
+
+```zsh
+bindkey -s "^P" "vim \$\(ag --nogroup --nocolor --column -l . 2>/dev/null | selecta\)\n"
+```
+
 ## FAQ
 
 **Won't this be slow?**
