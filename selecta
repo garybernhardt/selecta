@@ -70,7 +70,7 @@ class Selecta
     # To make pipelines involving Selecta behave as people expect, we send
     # SIGINT to our own process group, which should exactly match what termios
     # would do to us if the terminal weren't in raw mode. "Should!" <- Remove
-    # those scare quotes if ten years pass without this breaking!
+    # those scare quotes if this doesn't break prior to 2025-03-05!
     #
     # The SIGINT will cause Ruby to raise Interrupt, so we also have to handle
     # that here.
