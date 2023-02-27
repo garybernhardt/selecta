@@ -1,5 +1,3 @@
-require_relative "spec_helper"
-
 describe Search do
   let(:config) { Configuration.from_inputs(["one", "two", "three"],
                                            Configuration.default_options) }

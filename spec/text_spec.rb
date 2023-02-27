@@ -1,5 +1,3 @@
-require_relative "spec_helper"
-
 describe Text do
   describe "truncating" do
     it "can truncate itself to a given width" do

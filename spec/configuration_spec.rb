@@ -1,5 +1,4 @@
 require "base64"
-require_relative "spec_helper"
 
 describe Configuration do
   describe "choices" do
